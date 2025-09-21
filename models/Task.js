@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const taskSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true }, // task name/title
+    title: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
 
     project: {
@@ -16,7 +16,7 @@ const taskSchema = new mongoose.Schema(
       required: true,
     }, // which column
 
-    members: [{ type: mongoose.Schema.Types.ObjectId, ref: "TeamMember" }], // assigned members
+    members: [{ type: mongoose.Schema.Types.ObjectId, ref: "Freelancer" }],
 
     createdDate: { type: Date, default: Date.now },
     dueDate: { type: Date },
@@ -41,7 +41,7 @@ const taskSchema = new mongoose.Schema(
       {
         author: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "TeamMember",
+          ref: "Freelancer",
           required: true,
         },
         content: { type: String, required: true, trim: true },
@@ -51,5 +51,7 @@ const taskSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+taskSchema.index({ stage: 1, order: 1 }, { unique: true });
 
 export default mongoose.model("Task", taskSchema);

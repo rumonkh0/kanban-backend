@@ -7,7 +7,11 @@ const teamPaymentSchema = new mongoose.Schema(
       ref: "Project",
       required: true,
     },
-    freelancer: { type: mongoose.Schema.Types.ObjectId, ref: "Freelancer" },
+    freelancer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Freelancer",
+      required: true,
+    },
 
     toBePaid: { type: Number, required: true, default: 0 },
     discount: { type: Number, default: 0 },

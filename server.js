@@ -19,6 +19,12 @@ connectDB();
 
 // Route files
 import clients from "./routes/clients.js";
+import freelancers from "./routes/freelancers.js";
+import projects from "./routes/projects.js";
+import stages from "./routes/stages.js";
+import tasks from "./routes/tasks.js";
+import payments from "./routes/payments.js";
+import teamPayments from "./routes/teamPayments.js";
 
 const app = express();
 
@@ -57,6 +63,12 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Mount routers
 app.use("/api/v1/clients", clients);
+app.use("/api/v1/freelancers", freelancers);
+app.use("/api/v1/projects", projects);
+app.use("/api/v1/stages", stages);
+app.use("/api/v1/tasks", tasks);
+app.use("/api/v1/payments", payments);
+app.use("/api/v1/team-payments", teamPayments);
 
 app.get("/", (req, res) => {
   res.send("Hello From Creative CRM!");

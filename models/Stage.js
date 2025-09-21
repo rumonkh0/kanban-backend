@@ -14,4 +14,6 @@ const stageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+stageSchema.index({ project: 1, order: 1 }, { unique: true });
+
 export default mongoose.model("Stage", stageSchema);

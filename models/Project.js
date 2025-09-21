@@ -41,7 +41,7 @@ const projectSchema = new mongoose.Schema(
 
     notifyClients: { type: Boolean, default: false },
 
-    relatedFile: { type: String, default: null },
+    relatedFiles: [{ type: String, default: null }],
   },
   { timestamps: true }
 );

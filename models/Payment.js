@@ -7,7 +7,11 @@ const paymentSchema = new mongoose.Schema(
       ref: "Project",
       required: true,
     },
-    client: { type: mongoose.Schema.Types.ObjectId, ref: "Client" }, // optional, if linked to a client
+    client: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Client",
+      required: true,
+    }, // optional, if linked to a client
 
     toBePaid: { type: Number, required: true, default: 0 }, // total payable amount
     discount: { type: Number, default: 0 },

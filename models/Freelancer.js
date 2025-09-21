@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const freelancerSchema = new mongoose.Schema(
   {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     memberId: { type: String, unique: true, trim: true },
     salutation: {
       type: String,
@@ -9,14 +10,6 @@ const freelancerSchema = new mongoose.Schema(
       default: "Mr",
     },
     name: { type: String, required: true, trim: true },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
-    password: { type: String, required: true, select: false },
 
     designation: { type: String, trim: true },
     department: { type: String, trim: true },
