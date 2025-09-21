@@ -1,46 +1,48 @@
-const path = require('path');
-const express = require('express');
-const dotenv = require('dotenv');
-const morgan = require('morgan');
-const cookieParser = require('cookie-parser');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const cors = require('cors');
-const errorHandler = require('./middleware/error');
-const connectDB = require('./config/db');
+import path from "path";
+import { fileURLToPath } from "url";
+import express from "express";
+import dotenv from "dotenv";
+import morgan from "morgan";
+import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import cors from "cors";
+
+import errorHandler from "./middleware/error.js";
+import connectDB from "./config/db.js";
 
 // Load env vars
-dotenv.config({ path: './config/config.env' });
+dotenv.config({ path: "./config/config.env" });
 
 // Connect to database
 connectDB();
 
 // Route files
+import clients from "./routes/clients.js";
 
 const app = express();
 
 // Body parser
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // Cookie parser
 app.use(cookieParser());
 
 // Dev logging middleware
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
 }
 
 // File uploading
 
-
 // Set security headers
 app.use(helmet());
-
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 mins
-  max: 100
+  max: 100,
 });
 app.use(limiter);
 
@@ -48,9 +50,17 @@ app.use(limiter);
 app.use(cors());
 
 // Set static folder
-app.use(express.static(path.join(__dirname, 'public')));
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, "public")));
 
 // Mount routers
+app.use("/api/v1/clients", clients);
+
+app.get("/", (req, res) => {
+  res.send("Hello From Creative CRM!");
+});
 
 app.use(errorHandler);
 
@@ -58,13 +68,11 @@ const PORT = process.env.PORT || 5000;
 
 const server = app.listen(
   PORT,
-  console.log(
-    `Server running in ${process.env.NODE_ENV} mode on port ${PORT}`
-  )
+  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`)
 );
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
+process.on("unhandledRejection", (err, promise) => {
   console.log(`Error: ${err.message}`);
   // Close server & exit process
   // server.close(() => process.exit(1));

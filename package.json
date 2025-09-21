@@ -20,11 +20,12 @@
   },
   "license": "MIT",
   "author": "Rumon Khan",
-  "type": "commonjs",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js"
+    "start": "NODE_ENV=production node server",
+    "dev": "nodemon server"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -36,7 +37,8 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.1",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
