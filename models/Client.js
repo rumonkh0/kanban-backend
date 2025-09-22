@@ -43,10 +43,21 @@ const clientSchema = new mongoose.Schema(
     // Extras
     note: { type: String, trim: true },
     paymentMethods: [{ type: String, trim: true }],
-    profilePicture: { type: String, default: null },
-    companyLogo: { type: String, default: null },
+    profilePicture: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
+    companyLogo: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
   },
   { timestamps: true }
 );
+
+clientSchema.virtual("email").get(function () {
+  return this.user?.email;
+});
+
+clientSchema.virtual("role").get(function () {
+  return this.user?.role;
+});
+
+clientSchema.set("toObject", { virtuals: true });
+clientSchema.set("toJSON", { virtuals: true });
 
 export default mongoose.model("Client", clientSchema);

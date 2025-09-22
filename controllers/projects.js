@@ -1,6 +1,6 @@
 import asyncHandler from "../middleware/async.js";
+import File from "../models/File.js";
 import Project from "../models/Project.js";
-import User from "../models/User.js";
 
 // @desc      Create project
 // @route     POST /api/v1/project
@@ -8,8 +8,20 @@ import User from "../models/User.js";
 export const createProject = asyncHandler(async (req, res, next) => {
   let relatedFiles = [];
   if (req.files && req.files.relatedFiles.length > 0) {
-    relatedFiles = req.files.relatedFiles.map((file) => file.path);
+    for (const file of req.files.relatedFiles) {
+      const newImage = await File.create({
+        uploadedBy: req.admin._id,
+        filePath: file.path,
+        mimeType: file.mimetype,
+        fileSize: file.size,
+        fileName: file.filename,
+        originalName: file.originalname,
+        fileType: file.filename.split(".").pop(),
+      });
+      relatedFiles.push(newImage._id);
+    }
   }
+
   const project = await Project.create({
     ...req.body,
     relatedFiles,

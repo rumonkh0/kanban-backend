@@ -33,7 +33,7 @@ const paymentSchema = new mongoose.Schema(
     },
 
     invoiceNo: { type: String, unique: true, trim: true },
-    relatedFile: { type: String, default: null },
+    relatedFile: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
   },
   { timestamps: true }
 );

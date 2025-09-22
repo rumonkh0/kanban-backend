@@ -8,12 +8,17 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true, select: false },
     role: {
       type: String,
-      enum: ["admin", "client", "freelancer"],
+      enum: ["Admin", "Client", "Freelancer"],
       required: true,
+    },
+    profile: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: "role",
     },
   },
   { timestamps: true }
 );
+
 // Encrypt password using bcrypt
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {

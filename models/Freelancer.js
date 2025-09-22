@@ -11,8 +11,14 @@ const freelancerSchema = new mongoose.Schema(
     },
     name: { type: String, required: true, trim: true },
 
-    designation: { type: String, trim: true },
-    department: { type: String, trim: true },
+    designation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Designation",
+    },
+    department: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Department",
+    },
     country: { type: String, default: "USA", trim: true },
 
     mobile: {
@@ -65,8 +71,7 @@ const freelancerSchema = new mongoose.Schema(
       default: "Active",
     },
 
-    profilePicture: { type: String, default: null },
-    // role: "freelancer",
+    profilePicture: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
   },
   { timestamps: true }
 );

@@ -25,6 +25,11 @@ import stages from "./routes/stages.js";
 import tasks from "./routes/tasks.js";
 import payments from "./routes/payments.js";
 import teamPayments from "./routes/teamPayments.js";
+import trackers from "./routes/trackers.js";
+import services from "./routes/services.js";
+import designations from "./routes/designations.js";
+import departments from "./routes/departments.js";
+import appreciations from "./routes/appreciations.js";
 
 const app = express();
 
@@ -69,6 +74,11 @@ app.use("/api/v1/stages", stages);
 app.use("/api/v1/tasks", tasks);
 app.use("/api/v1/payments", payments);
 app.use("/api/v1/team-payments", teamPayments);
+app.use("/api/v1/trackers", trackers);
+app.use("/api/v1/services", services);
+app.use("/api/v1/designations", designations);
+app.use("/api/v1/departments", departments);
+app.use("/api/v1/appreciations", appreciations);
 
 app.get("/", (req, res) => {
   res.send("Hello From Creative CRM!");

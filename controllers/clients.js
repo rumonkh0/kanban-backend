@@ -1,7 +1,46 @@
 import ErrorResponse from "../utils/errorResponse.js";
 import asyncHandler from "../middleware/async.js";
+import fs from "fs";
 import Client from "../models/Client.js";
 import User from "../models/User.js";
+import File from "../models/File.js";
+
+// @desc      Get all clients
+// @route     GET /api/v1/clients
+// @access    Private/Admin
+export const getClients = asyncHandler(async (req, res, next) => {
+  const clients = await Client.find().populate({
+    path: "user",
+    select: "email role",
+  });
+
+  res.status(200).json({
+    success: true,
+    count: clients.length,
+    data: clients,
+  });
+});
+
+// @desc      Get single client
+// @route     GET /api/v1/clients/:id
+// @access    Private/Admin
+export const getClient = asyncHandler(async (req, res, next) => {
+  const client = await Client.findById(req.params.id).populate({
+    path: "user",
+    select: "email role",
+  });
+
+  if (!client) {
+    return next(
+      new ErrorResponse(`Client not found with id of ${req.params.id}`, 404)
+    );
+  }
+
+  res.status(200).json({
+    success: true,
+    data: client,
+  });
+});
 
 // @desc      Create client
 // @route     POST /api/v1/clients
@@ -9,13 +48,37 @@ import User from "../models/User.js";
 export const createClient = asyncHandler(async (req, res, next) => {
   const { email, password, ...profileData } = req.body;
   let profilePicture, companyLogo;
-  if (req.files.profilePicture) {
-    profilePicture = req.files.profilePicture[0].path;
+
+  if (req.files && req.files.profilePicture) {
+    const file = req.files.profilePicture[0];
+
+    const newImage = await File.create({
+      // uploadedBy: req.user._id,
+      filePath: file.path,
+      mimeType: file.mimetype,
+      fileSize: file.size,
+      fileName: file.filename,
+      originalName: file.originalname,
+      fileType: file.filename.split(".").pop(),
+    });
+    profilePicture = newImage._id;
   }
 
-  if (req.files.companyLogo) {
-    companyLogo = req.files.companyLogo[0].path;
+  if (req.files && req.files.companyLogo) {
+    const file = req.files.companyLogo[0];
+    const newImage = await File.create({
+      // uploadedBy: req.user._id,
+      filePath: file.path,
+      mimeType: file.mimetype,
+      fileSize: file.size,
+      fileName: file.filename,
+      originalName: file.originalname,
+      fileType: file.filename.split(".").pop(),
+    });
+
+    companyLogo = newImage._id;
   }
+
   const user = await User.create({
     email,
     password,
@@ -34,5 +97,159 @@ export const createClient = asyncHandler(async (req, res, next) => {
   res.status(201).json({
     success: true,
     data: clientData,
+  });
+});
+
+// @desc      Update client
+// @route     PUT /api/v1/clients/:id
+// @access    Private/Admin
+export const updateClient = asyncHandler(async (req, res, next) => {
+  let client = await Client.findById(req.params.id);
+
+  if (!client) {
+    return next(
+      new ErrorResponse(`Client not found with id of ${req.params.id}`, 404)
+    );
+  }
+
+  const { email, password, ...profileData } = req.body;
+  const updateData = { ...profileData };
+
+  if (req.files) {
+    if (req.files.profilePicture) {
+      if (client.profilePicture) {
+        fs.unlink(client.profilePicture, (err) => {
+          if (err) console.error("Error deleting old profile picture:", err);
+        });
+        const deleteFile = await File.findById(client.profilePicture);
+        if (deleteFile) await deleteFile.deleteOne();
+      }
+
+      const file = req.files.profilePicture[0];
+
+      try {
+        const newImage = await File.create({
+          // uploadedBy: req.user._id,
+          filePath: file.path,
+          mimeType: file.mimetype,
+          fileSize: file.size,
+          fileName: file.filename,
+          originalName: file.originalname,
+          fileType: file.filename.split(".").pop(),
+        });
+        updateData.profilePicture = newImage._id;
+      } catch (err) {
+        fs.unlink(file.path, (unlinkErr) => {
+          if (unlinkErr)
+            console.error("Error deleting newly uploaded file:", unlinkErr);
+        });
+        return next(
+          new ErrorResponse(
+            `Failed to update profile picture: ${err.message}`,
+            500
+          )
+        );
+      }
+    }
+
+    if (req.files.companyLogo) {
+      if (client.companyLogo) {
+        fs.unlink(client.companyLogo, (err) => {
+          if (err) console.error("Error deleting old company logo:", err);
+        });
+
+        const deleteFile = await File.findById(client.companyLogo);
+        if (deleteFile) await deleteFile.deleteOne();
+      }
+
+      const file = req.files.companyLogo[0];
+      try {
+        const newImage = await File.create({
+          // uploadedBy: req.user._id,
+          filePath: file.path,
+          mimeType: file.mimetype,
+          fileSize: file.size,
+          fileName: file.filename,
+          originalName: file.originalname,
+          fileType: file.filename.split(".").pop(),
+        });
+        updateData.companyLogo = newImage._id;
+      } catch (err) {
+        fs.unlink(file.path, (unlinkErr) => {
+          if (unlinkErr)
+            console.error("Error deleting newly uploaded file:", unlinkErr);
+        });
+        return next(
+          new ErrorResponse(
+            `Failed to update profile picture: ${err.message}`,
+            500
+          )
+        );
+      }
+    }
+  }
+
+  if (email || password) {
+    await User.findByIdAndUpdate(
+      client.user,
+      { email, password },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+  }
+
+  client = await Client.findByIdAndUpdate(req.params.id, updateData, {
+    new: true,
+    runValidators: true,
+  });
+
+  const updatedClient = await client.populate({
+    path: "user",
+    select: "email role",
+  });
+
+  res.status(200).json({
+    success: true,
+    data: updatedClient,
+  });
+});
+
+// @desc      Delete client
+// @route     DELETE /api/v1/clients/:id
+// @access    Private/Admin
+export const deleteClient = asyncHandler(async (req, res, next) => {
+  const client = await Client.findById(req.params.id);
+
+  if (!client) {
+    return next(
+      new ErrorResponse(`Client not found with id of ${req.params.id}`, 404)
+    );
+  }
+
+  if (client.profilePicture) {
+    fs.unlink(client.profilePicture, (err) => {
+      if (err) console.error("Error deleting profile picture:", err);
+    });
+    const deleteFile = await File.findById(client.profilePicture);
+    if (deleteFile) await deleteFile.deleteOne();
+  }
+  if (client.companyLogo) {
+    fs.unlink(client.companyLogo, (err) => {
+      if (err) console.error("Error deleting company logo:", err);
+    });
+    const deleteFile = await File.findById(client.companyLogo);
+    if (deleteFile) await deleteFile.deleteOne();
+  }
+
+  await User.findByIdAndDelete(client.user);
+
+  await client.deleteOne();
+
+  res.status(200).json({
+    success: true,
+    data: {},
+    message: "Client and associated user deleted successfully.",
   });
 });

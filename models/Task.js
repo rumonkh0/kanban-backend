@@ -27,8 +27,8 @@ const taskSchema = new mongoose.Schema(
       default: "Medium",
     },
 
-    files: [{ type: String }],
-    images: [{ type: String }],
+    files: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
+    images: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
 
     order: { type: Number, default: 0 },
 

@@ -1,7 +1,13 @@
 import express from "express";
 import path from "path";
 import multer from "multer";
-import { createClient } from "../controllers/clients.js";
+import {
+  createClient,
+  deleteClient,
+  getClient,
+  getClients,
+  updateClient,
+} from "../controllers/clients.js";
 import fs from "fs";
 
 const uploadDirectory = "public/uploads/client/";
@@ -47,5 +53,10 @@ const uploadFields = upload.fields([
 
 const router = express.Router();
 
-router.route("/").post(uploadFields, createClient);
+router.route("/").post(uploadFields, createClient).get(getClients);
+router
+  .route("/:id")
+  .get(getClient)
+  .put(uploadFields, updateClient)
+  .delete(deleteClient);
 export default router;
