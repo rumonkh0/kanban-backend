@@ -1,10 +1,16 @@
 import express from "express";
-import multer from "multer";
-import { createStage } from "../controllers/stages.js";
-
-const upload = multer();
+import {
+  createStage,
+  getStages,
+  getStage,
+  updateStage,
+  deleteStage,
+} from "../controllers/stages.js";
 
 const router = express.Router();
 
-router.route("/").post(upload.none(), createStage);
+router.route("/").post(createStage).get(getStages);
+
+router.route("/:id").get(getStage).put(updateStage).delete(deleteStage);
+
 export default router;
