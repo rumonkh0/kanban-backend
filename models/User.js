@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 const userSchema = new mongoose.Schema(
   {
@@ -14,6 +15,8 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       refPath: "role",
     },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
   },
   { timestamps: true }
 );
@@ -52,8 +55,32 @@ userSchema.pre(
   }
 );
 
+userSchema.methods.getSignedJwtToken = function () {
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE,
+  });
+};
+
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Method to get OTP
+userSchema.methods.getOTP = async function () {
+  const OTP = String(Math.floor(1000 + Math.random() * 9000));
+
+  const saltRounds = 10;
+  const hashedOTP = await bcrypt.hash(OTP, saltRounds);
+
+  this.password_reset_token = hashedOTP;
+  this.reset_password_expire = Date.now() + 10 * 60 * 1000;
+
+  return OTP;
+};
+
+// Method to verify OTP
+userSchema.methods.verifyOTP = function (OTP) {
+  return bcrypt.compare(OTP, this.password_reset_token);
 };
 
 export default mongoose.model("User", userSchema);

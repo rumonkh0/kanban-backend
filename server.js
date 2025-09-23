@@ -18,6 +18,7 @@ dotenv.config({ path: "./config/config.env" });
 connectDB();
 
 // Route files
+import auth from "./routes/auth.js";
 import clients from "./routes/clients.js";
 import freelancers from "./routes/freelancers.js";
 import projects from "./routes/projects.js";
@@ -70,6 +71,7 @@ const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "public")));
 
 // Mount routers
+app.use("/api/v1/auth", auth);
 app.use("/api/v1/clients", clients);
 app.use("/api/v1/freelancers", freelancers);
 app.use("/api/v1/projects", projects);
