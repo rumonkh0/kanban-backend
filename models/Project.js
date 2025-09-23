@@ -37,13 +37,12 @@ const projectSchema = new mongoose.Schema(
 
     relatedFiles: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
 
-
     // tracker part
-    
+
     description: { type: String },
     status: {
       type: String,
-      enum: ["Active", "Completed", "On Hold"],
+      enum: ["Active", "Completed", "On Hold", "In Progress"],
       default: "Active",
     },
 
@@ -72,6 +71,16 @@ const projectSchema = new mongoose.Schema(
     comments: { type: String },
   },
   { timestamps: true }
+);
+
+// Middleware to delete all associated ProjectMember documents when a Project is deleted
+projectSchema.pre(
+  "deleteOne",
+  { document: true, query: false },
+  async function (next) {
+    await this.model("ProjectMember").deleteMany({ project: this._id });
+    next();
+  }
 );
 
 export default mongoose.model("Project", projectSchema);

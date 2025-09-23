@@ -2,7 +2,13 @@ import express from "express";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
-import { createProject } from "../controllers/projects.js";
+import {
+  createProject,
+  getProjects,
+  getProject,
+  updateProject,
+  deleteProject,
+} from "../controllers/projects.js";
 import notes from "./notes.js";
 import payments from "./payments.js";
 import teamPayments from "./teamPayments.js";
@@ -23,7 +29,7 @@ if (!fs.existsSync(uploadDirectory)) {
   fs.mkdirSync(uploadDirectory, { recursive: true });
 }
 
-const allowedExtensions = [".jpg", ".jpeg", ".png"];
+// const allowedExtensions = [".jpg", ".jpeg", ".png"];
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -39,14 +45,14 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  fileFilter: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowedExtensions.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Invalid file type. Only images are allowed."));
-    }
-  },
+  // fileFilter: (req, file, cb) => {
+  //   const ext = path.extname(file.originalname).toLowerCase();
+  //   if (allowedExtensions.includes(ext)) {
+  //     cb(null, true);
+  //   } else {
+  //     cb(new Error("Invalid file type. Only images are allowed."));
+  //   }
+  // },
   limits: {
     fileSize: 5 * 1024 * 1024, // 5 MB size limit
   },
@@ -54,5 +60,12 @@ const upload = multer({
 
 const uploadFields = upload.fields([{ name: "relatedFiles", maxCount: 10 }]);
 
-router.route("/").post(uploadFields, createProject);
+router.route("/").post(uploadFields, createProject).get(getProjects);
+
+router
+  .route("/:id")
+  .get(getProject)
+  .put(uploadFields, updateProject)
+  .delete(deleteProject);
+
 export default router;
