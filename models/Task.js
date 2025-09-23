@@ -14,7 +14,7 @@ const taskSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Stage",
       required: true,
-    }, // which column
+    },
 
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: "Freelancer" }],
 
@@ -37,17 +37,6 @@ const taskSchema = new mongoose.Schema(
       enum: ["Not Started", "In Progress", "Completed", "Blocked"],
       default: "Not Started",
     },
-    comments: [
-      {
-        author: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Freelancer",
-          required: true,
-        },
-        content: { type: String, required: true, trim: true },
-        createdAt: { type: Date, default: Date.now },
-      },
-    ],
   },
   { timestamps: true }
 );

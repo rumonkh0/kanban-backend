@@ -2,65 +2,63 @@ import express from "express";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
-import { createTask } from "../controllers/tasks.js";
+import {
+  createTask,
+  getTasks,
+  getTask,
+  updateTask,
+  deleteTask,
+} from "../controllers/tasks.js";
+import comments from "./comments.js";
+
+const router = express.Router({ mergeParams: true });
+router.use("/:projectId/comments", comments);
 
 const uploadDirectory = "public/uploads/tasks/";
 
+// Ensure that the upload directory exists
 if (!fs.existsSync(uploadDirectory)) {
   fs.mkdirSync(uploadDirectory, { recursive: true });
 }
 
-const allowedImageExtensions = [".jpg", ".jpeg", ".png", ".gif"];
-const allowedImageMimeTypes = ["image/jpeg", "image/png", "image/gif"];
-
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: function (req, file, cb) {
     cb(null, uploadDirectory);
   },
-  filename: (req, file, cb) => {
+  filename: function (req, file, cb) {
     cb(
       null,
-      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
     );
   },
 });
 
 const upload = multer({
   storage: storage,
-  fileFilter: (req, file, cb) => {
-    if (file.fieldname === "images") {
-      const ext = path.extname(file.originalname).toLowerCase();
-      const mimeType = file.mimetype;
-
-      if (
-        allowedImageExtensions.includes(ext) &&
-        allowedImageMimeTypes.includes(mimeType)
-      ) {
-        cb(null, true); // Accept the image
-      } else {
-        cb(
-          new Error(
-            "Invalid file type. Only JPG, JPEG, PNG, and GIF images are allowed for the 'images' field."
-          )
-        );
-      }
-    } else if (file.fieldname === "files") {
-      cb(null, true);
-    } else {
-      cb(new Error("Unexpected field."));
-    }
-  },
+  // fileFilter: (req, file, cb) => {
+  //   const ext = path.extname(file.originalname).toLowerCase();
+  //   if (allowedExtensions.includes(ext)) {
+  //     cb(null, true);
+  //   } else {
+  //     cb(new Error("Invalid file type. Only images are allowed."));
+  //   }
+  // },
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB size limit for all files
+    fileSize: 5 * 1024 * 1024, // 5 MB size limit
   },
 });
 
 const uploadFields = upload.fields([
-  { name: "images", maxCount: 10 },
   { name: "files", maxCount: 10 },
+  { name: "images", maxCount: 10 },
 ]);
 
-const router = express.Router();
+router.route("/").post(uploadFields, createTask).get(getTasks);
 
-router.route("/").post(uploadFields, createTask);
+router
+  .route("/:id")
+  .get(getTask)
+  .put(uploadFields, updateTask)
+  .delete(deleteTask);
+
 export default router;

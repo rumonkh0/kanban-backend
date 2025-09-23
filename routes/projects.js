@@ -13,6 +13,7 @@ import notes from "./notes.js";
 import payments from "./payments.js";
 import teamPayments from "./teamPayments.js";
 import projectMembers from "./projectMembers.js";
+import stages from "./stages.js";
 
 const router = express.Router();
 
@@ -21,6 +22,7 @@ router.use("/:projectId/notes", notes);
 router.use("/:projectId/payments", payments);
 router.use("/:projectId/team-payments", teamPayments);
 router.use("/:projectId/projectmembers", projectMembers);
+router.use("/:projectId/stages", stages);
 
 const uploadDirectory = "public/uploads/project/";
 
