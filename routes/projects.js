@@ -6,6 +6,7 @@ import { createProject } from "../controllers/projects.js";
 import notes from "./notes.js";
 import payments from "./payments.js";
 import teamPayments from "./teamPayments.js";
+import projectMembers from "./projectMembers.js";
 
 const router = express.Router();
 
@@ -13,6 +14,7 @@ const router = express.Router();
 router.use("/:projectId/notes", notes);
 router.use("/:projectId/payments", payments);
 router.use("/:projectId/team-payments", teamPayments);
+router.use("/:projectId/projectmembers", projectMembers);
 
 const uploadDirectory = "public/uploads/project/";
 

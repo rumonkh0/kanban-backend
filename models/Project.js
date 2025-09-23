@@ -30,15 +30,6 @@ const projectSchema = new mongoose.Schema(
     progress: { type: Number, default: 0, min: 0, max: 100 },
     calculateProgress: { type: Boolean, default: false },
 
-    // Financials
-    // projectPrice: { type: Number, default: 0 },
-    // discount: { type: Number, default: 0 },
-    // teamMembersPay: { type: Number, default: 0 },
-    // amountPaidByClient: { type: Number, default: 0 },
-    // amountOwedByClient: { type: Number, default: 0 },
-    // amountPaidToTeam: { type: Number, default: 0 },
-    // amountOwedToTeam: { type: Number, default: 0 },
-
     archive: { type: Boolean, default: false },
     pin: { type: Boolean, default: false },
 
@@ -46,6 +37,9 @@ const projectSchema = new mongoose.Schema(
 
     relatedFiles: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
 
+
+    // tracker part
+    
     description: { type: String },
     status: {
       type: String,
