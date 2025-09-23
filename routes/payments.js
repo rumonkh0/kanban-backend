@@ -2,7 +2,13 @@ import express from "express";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
-import { createPayment } from "../controllers/payments.js";
+import {
+  createPayment,
+  getPayments,
+  getPayment,
+  updatePayment,
+  deletePayment,
+} from "../controllers/payments.js";
 
 const uploadDirectory = "public/uploads/payment/";
 
@@ -30,7 +36,15 @@ const upload = multer({
   },
 });
 
-const router = express.Router();
+const uploadFields = upload.fields([{ name: "relatedFile", maxCount: 1 }]);
 
-router.route("/").post(upload.single("relatedFile"), createPayment);
+const router = express.Router({ mergeParams: true });
+
+router.route("/").post(uploadFields, createPayment).get(getPayments);
+
+router
+  .route("/:id")
+  .get(getPayment)
+  .put(uploadFields, updatePayment)
+  .delete(deletePayment);
 export default router;

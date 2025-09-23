@@ -2,7 +2,14 @@ import express from "express";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
-import { createFreelancer } from "../controllers/freelancers.js";
+import {
+  createFreelancer,
+  getFreelancers,
+  getFreelancer,
+  updateFreelancer,
+  deleteFreelancer,
+} from "../controllers/freelancers.js";
+import teamPayments from "./teamPayments.js";
 
 const uploadDirectory = "public/uploads/client/";
 
@@ -43,6 +50,13 @@ const upload = multer({
 const uploadFields = upload.fields([{ name: "profilePicture", maxCount: 1 }]);
 
 const router = express.Router();
+router.use("/:projectId/team-payments", teamPayments);
 
-router.route("/").post(uploadFields, createFreelancer);
+router.route("/").get(getFreelancers).post(uploadFields, createFreelancer);
+
+router
+  .route("/:id")
+  .get(getFreelancer)
+  .put(uploadFields, updateFreelancer)
+  .delete(deleteFreelancer);
 export default router;

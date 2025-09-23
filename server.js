@@ -30,6 +30,7 @@ import services from "./routes/services.js";
 import designations from "./routes/designations.js";
 import departments from "./routes/departments.js";
 import appreciations from "./routes/appreciations.js";
+import notes from "./routes/notes.js";
 
 const app = express();
 
@@ -79,6 +80,7 @@ app.use("/api/v1/services", services);
 app.use("/api/v1/designations", designations);
 app.use("/api/v1/departments", departments);
 app.use("/api/v1/appreciations", appreciations);
+app.use("/api/v1/notes", notes);
 
 app.get("/", (req, res) => {
   res.send("Hello From Creative CRM!");

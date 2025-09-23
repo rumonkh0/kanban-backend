@@ -9,6 +9,7 @@ import {
   updateClient,
 } from "../controllers/clients.js";
 import fs from "fs";
+import payments from "./payments.js";
 
 const uploadDirectory = "public/uploads/client/";
 
@@ -52,6 +53,8 @@ const uploadFields = upload.fields([
 ]);
 
 const router = express.Router();
+
+router.use("/:projectId/payments", payments);
 
 router.route("/").post(uploadFields, createClient).get(getClients);
 router

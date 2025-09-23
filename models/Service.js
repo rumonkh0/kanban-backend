@@ -8,11 +8,12 @@ const serviceSchema = new mongoose.Schema(
     clientsPay: { type: Number, default: 0 },
     teamsPayment: { type: Number, default: 0 },
 
-    freelancer: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Freelancer",
-      default: null,
-    },
+    freelancers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Freelancer",
+      },
+    ],
 
     description: { type: String, trim: true },
     addons: { type: String, trim: true },

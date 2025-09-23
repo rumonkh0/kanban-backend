@@ -82,7 +82,7 @@ export const createClient = asyncHandler(async (req, res, next) => {
   const user = await User.create({
     email,
     password,
-    role: "client",
+    role: "Client",
   });
   const client = await Client.create({
     user: user._id,

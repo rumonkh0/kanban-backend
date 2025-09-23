@@ -9,7 +9,7 @@ const projectSchema = new mongoose.Schema(
     dueDate: { type: Date },
     noDeadline: { type: Boolean, default: false },
 
-    service: { type: String, trim: true },
+    service: { type: mongoose.Schema.Types.ObjectId, ref: "Service" },
     department: [{ type: String, trim: true }],
 
     client: { type: mongoose.Schema.Types.ObjectId, ref: "Client" },
@@ -31,17 +31,51 @@ const projectSchema = new mongoose.Schema(
     calculateProgress: { type: Boolean, default: false },
 
     // Financials
-    projectPrice: { type: Number, default: 0 },
-    discount: { type: Number, default: 0 },
-    teamMembersPay: { type: Number, default: 0 },
-    amountPaidByClient: { type: Number, default: 0 },
-    amountOwedByClient: { type: Number, default: 0 },
-    amountPaidToTeam: { type: Number, default: 0 },
-    amountOwedToTeam: { type: Number, default: 0 },
+    // projectPrice: { type: Number, default: 0 },
+    // discount: { type: Number, default: 0 },
+    // teamMembersPay: { type: Number, default: 0 },
+    // amountPaidByClient: { type: Number, default: 0 },
+    // amountOwedByClient: { type: Number, default: 0 },
+    // amountPaidToTeam: { type: Number, default: 0 },
+    // amountOwedToTeam: { type: Number, default: 0 },
+
+    archive: { type: Boolean, default: false },
+    pin: { type: Boolean, default: false },
 
     notifyClients: { type: Boolean, default: false },
 
     relatedFiles: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
+
+    description: { type: String },
+    status: {
+      type: String,
+      enum: ["Active", "Completed", "On Hold"],
+      default: "Active",
+    },
+
+    // Pricing and discount
+    price: { type: Number, default: 0 },
+    customPrice: { type: Number, default: 0 },
+    discount: { type: Number, default: 0 },
+    finalAmountForClient: { type: Number, default: 0 },
+
+    // Client payments
+    modeOfPayment: { type: String },
+    datePaidByClient: { type: Date },
+    amountPaidByClient: { type: Number, default: 0 },
+    amountOwedByClient: { type: Number, default: 0 },
+
+    // Team member payments
+    amountPayableToMembers: { type: Number, default: 0 },
+    datePaidToMembers: { type: Date },
+    amountPaidToMembers: { type: Number, default: 0 },
+    amountOwedToMembers: { type: Number, default: 0 },
+
+    // Final earning
+    finalAmountEarned: { type: Number, default: 0 },
+
+    // Misc
+    comments: { type: String },
   },
   { timestamps: true }
 );

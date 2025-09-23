@@ -12,7 +12,7 @@ export const uploadFile = asyncHandler(async (req, res, next) => {
   const { originalname, filename, path, size, mimetype } = req.file;
 
   const newFile = await File.create({
-    uploadedBy: req.user._id,
+    // uploadedBy: req.user._id,
     filePath: path,
     mimeType: mimetype,
     fileSize: size,

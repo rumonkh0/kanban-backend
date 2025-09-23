@@ -6,7 +6,7 @@ const freelancerSchema = new mongoose.Schema(
     memberId: { type: String, unique: true, trim: true },
     salutation: {
       type: String,
-      enum: ["Mr", "Mrs", "Ms", "Dr", "Other"],
+      enum: ["Mr", "Mrs", "Ms", "Dr"],
       default: "Mr",
     },
     name: { type: String, required: true, trim: true },
@@ -34,7 +34,6 @@ const freelancerSchema = new mongoose.Schema(
     joiningDate: { type: Date },
     dob: { type: Date },
     language: { type: String, default: "English", trim: true },
-    designationRole: { type: String, trim: true },
 
     address: { type: String, trim: true },
     about: { type: String, trim: true },

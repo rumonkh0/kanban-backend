@@ -2,7 +2,13 @@ import express from "express";
 import path from "path";
 import multer from "multer";
 import fs from "fs";
-import { createTeamPayment } from "../controllers/teamPayments.js";
+import {
+  createTeamPayment,
+  getTeamPayments,
+  getTeamPayment,
+  updateTeamPayment,
+  deleteTeamPayment,
+} from "../controllers/teamPayments.js";
 
 const uploadDirectory = "public/uploads/teamPayment/";
 
@@ -29,8 +35,14 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5 MB size limit
   },
 });
+const uploadFields = upload.fields([{ name: "relatedFile", maxCount: 1 }]);
+const router = express.Router({ mergeParams: true });
 
-const router = express.Router();
+router.route("/").post(uploadFields, createTeamPayment).get(getTeamPayments);
 
-router.route("/").post(upload.single("relatedFile"), createTeamPayment);
+router
+  .route("/:id")
+  .get(getTeamPayment)
+  .put(uploadFields, updateTeamPayment)
+  .delete(deleteTeamPayment);
 export default router;

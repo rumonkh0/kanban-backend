@@ -3,6 +3,16 @@ import path from "path";
 import multer from "multer";
 import fs from "fs";
 import { createProject } from "../controllers/projects.js";
+import notes from "./notes.js";
+import payments from "./payments.js";
+import teamPayments from "./teamPayments.js";
+
+const router = express.Router();
+
+// Re-route into other resource routers
+router.use("/:projectId/notes", notes);
+router.use("/:projectId/payments", payments);
+router.use("/:projectId/team-payments", teamPayments);
 
 const uploadDirectory = "public/uploads/project/";
 
@@ -41,8 +51,6 @@ const upload = multer({
 });
 
 const uploadFields = upload.fields([{ name: "relatedFiles", maxCount: 10 }]);
-
-const router = express.Router();
 
 router.route("/").post(uploadFields, createProject);
 export default router;
