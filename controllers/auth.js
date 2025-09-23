@@ -112,7 +112,7 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
   }
 
   // Get reset token
-  const resetToken = user.getResetPasswordToken();
+  const resetToken = await user.getOTP();
 
   await user.save({ validateBeforeSave: false });
 
