@@ -105,29 +105,32 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
 // @route     POST /api/v1/auth/forgotpassword
 // @access    Public
 export const forgotPassword = asyncHandler(async (req, res, next) => {
-  const user = await User.findOne({ email: req.body.email });
+  const user = await User.findOne({ email: req.body.email }).populate(
+    "profile"
+  );
 
   if (!user) {
     return next(new ErrorResponse("There is no user with that email", 404));
   }
 
   // Get reset token
-  const resetToken = await user.getOTP();
-
+  const otp = await user.getOTP();
+  console.log(otp);
   await user.save({ validateBeforeSave: false });
-
-  // Create reset url
-  const resetUrl = `${req.protocol}://${req.get(
-    "host"
-  )}/api/v1/auth/resetpassword/${resetToken}`;
-
-  const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
-
   try {
     await sendEmail({
       email: user.email,
-      subject: "Password reset token",
-      message,
+      subject: `Your password reset otp is - ${otp}`,
+      template: "resetPassword",
+      context: {
+        name: user.profile.name,
+        otp: otp,
+        date: new Date().toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }),
+      },
     });
 
     res.status(200).json({ success: true, data: "Email sent" });
@@ -155,22 +158,19 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
   }
 
   // Find the user by their email
-  const user = await User.findOne({ email }).select(
-    "+resetPasswordToken resetPasswordExpire"
-  );
+  const user = await User.findOne({ email }).select("+resetPasswordToken +resetPasswordExpire");
 
   if (!user) {
     return next(new ErrorResponse("User not found.", 404));
   }
-
   // Check if the OTP is expired
   if (user.resetPasswordExpire < Date.now()) {
     return next(
       new ErrorResponse("OTP has expired. Please request a new one.", 400)
     );
   }
-
   // Verify the provided OTP
+
   const isMatch = await user.verifyOTP(otp);
 
   if (!isMatch) {

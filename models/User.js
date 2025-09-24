@@ -15,8 +15,8 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       refPath: "role",
     },
-    resetPasswordToken: String,
-    resetPasswordExpire: Date,
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordExpire: { type: Date, select: false },
   },
   { timestamps: true }
 );
@@ -72,15 +72,15 @@ userSchema.methods.getOTP = async function () {
   const saltRounds = 10;
   const hashedOTP = await bcrypt.hash(OTP, saltRounds);
 
-  this.password_reset_token = hashedOTP;
-  this.reset_password_expire = Date.now() + 10 * 60 * 1000;
+  this.resetPasswordToken = hashedOTP;
+  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
 
   return OTP;
 };
 
 // Method to verify OTP
-userSchema.methods.verifyOTP = function (OTP) {
-  return bcrypt.compare(OTP, this.password_reset_token);
+userSchema.methods.verifyOTP = async function (OTP) {
+  return await bcrypt.compare(OTP, this.resetPasswordToken);
 };
 
 export default mongoose.model("User", userSchema);

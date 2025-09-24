@@ -91,12 +91,12 @@ export const createClient = asyncHandler(async (req, res, next) => {
     companyLogo,
   });
 
-  const clientData = client.toObject();
-  clientData.email = user.email;
+  user.profile = client._id;
+  await user.save();
 
   res.status(201).json({
     success: true,
-    data: clientData,
+    data: client,
   });
 });
 
