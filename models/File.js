@@ -12,6 +12,14 @@ const fileSchema = new mongoose.Schema(
     fileName: { type: String },
     originalName: { type: String },
     fileType: { type: String },
+    linkedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    linkedModel: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );
