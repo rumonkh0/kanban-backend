@@ -54,13 +54,14 @@ const freelancerSchema = new mongoose.Schema(
     employmentType: {
       type: String,
       enum: ["Full-Time", "Part-Time", "Contract", "Intern", "Other"],
+      default: "Full-Time",
       trim: true,
     },
 
     addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
     maritalStatus: {
       type: String,
-      enum: ["Single", "Married", "Other"],
+      enum: ["Single", "Married", "Divorced", "Widowed"],
       default: "Single",
     },
     businessAddress: { type: String, trim: true },

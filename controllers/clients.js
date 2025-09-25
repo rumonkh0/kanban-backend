@@ -126,6 +126,8 @@ export const createClient = asyncHandler(async (req, res, next) => {
     return next(error);
   }
 
+  // await new Promise((res) => setTimeout(res, 4000)); // sleeps 1 second
+
   res.status(201).json({
     success: true,
     data: client,
@@ -226,15 +228,16 @@ export const updateClient = asyncHandler(async (req, res, next) => {
     }
   }
 
+  const userUpdate = { email };
+  if (password && password !== "") {
+    userUpdate.password = password;
+  }
+
   if (email || password) {
-    await User.findByIdAndUpdate(
-      client.user,
-      { email, password },
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
+    await User.findByIdAndUpdate(client.user, userUpdate, {
+      new: true,
+      runValidators: true,
+    });
   }
 
   client = await Client.findByIdAndUpdate(req.params.id, updateData, {
