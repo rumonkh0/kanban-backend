@@ -12,19 +12,12 @@ import fs from "fs";
 // @route     POST /api/v1/freelancers
 // @access    Private/Admin
 export const createFreelancer = asyncHandler(async (req, res, next) => {
-  const {
-    email,
-    password,
-    designation,
-    department,
-    addedBy,
-    ...freelancerData
-  } = req.body;
+  const { email, password, department, addedBy, ...freelancerData } = req.body;
 
-  if (designation) {
-    const d = await Designation.findById(designation);
-    if (!d) return next(new ErrorResponse("Designation not found.", 404));
-  }
+  // if (designation) {
+  //   const d = await Designation.findById(designation);
+  //   if (!d) return next(new ErrorResponse("Designation not found.", 404));
+  // }
   if (department) {
     const d = await Department.findById(department);
     if (!d) return next(new ErrorResponse("Department not found.", 404));
@@ -33,12 +26,13 @@ export const createFreelancer = asyncHandler(async (req, res, next) => {
   const user = await User.create({ email, password, role: "Freelancer" });
 
   let profilePicture = null;
-  if (req.files) {
+  if (req.files.profilePicture) {
+    console.log(req.files);
     const file = req.files.profilePicture[0];
     try {
       const newFile = await File.create({
         // uploadedBy: req.user._id,
-        filePath: file.path,
+        filePath: path.relative("public", file.path),
         mimeType: file.mimetype,
         fileSize: file.size,
         fileName: file.filename,
@@ -57,7 +51,6 @@ export const createFreelancer = asyncHandler(async (req, res, next) => {
   // 4. Create the freelancer profile
   const freelancer = await Freelancer.create({
     user: user._id,
-    designation,
     department,
     addedBy,
     profilePicture,
@@ -77,7 +70,7 @@ export const createFreelancer = asyncHandler(async (req, res, next) => {
 export const getFreelancers = asyncHandler(async (req, res, next) => {
   const freelancers = await Freelancer.find()
     .populate({ path: "user", select: "email role" })
-    .populate("designation")
+    // .populate("designation")
     .populate("department")
     // .populate("addedBy")
     .populate("profilePicture");
@@ -95,7 +88,7 @@ export const getFreelancers = asyncHandler(async (req, res, next) => {
 export const getFreelancer = asyncHandler(async (req, res, next) => {
   const freelancer = await Freelancer.findById(req.params.id)
     .populate({ path: "user", select: "email role" })
-    .populate("designation")
+    // .populate("designation")
     .populate("department")
     // .populate("addedBy")
     .populate("profilePicture");
@@ -127,10 +120,10 @@ export const updateFreelancer = asyncHandler(async (req, res, next) => {
     await User.findByIdAndUpdate(freelancer.user, { email, password });
   }
 
-  if (designation) {
-    const d = await Designation.findById(designation);
-    if (!d) return next(new ErrorResponse("Designation not found.", 404));
-  }
+  // if (designation) {
+  //   const d = await Designation.findById(designation);
+  //   if (!d) return next(new ErrorResponse("Designation not found.", 404));
+  // }
   if (department) {
     const d = await Department.findById(department);
     if (!d) return next(new ErrorResponse("Department not found.", 404));
@@ -154,7 +147,7 @@ export const updateFreelancer = asyncHandler(async (req, res, next) => {
       const file = req.files.profilePicture[0];
       const newFile = await File.create({
         // uploadedBy: req.user._id,
-        filePath: file.path,
+        filePath: path.relative("public", file.path),
         mimeType: file.mimetype,
         fileSize: file.size,
         fileName: file.filename,
@@ -164,14 +157,14 @@ export const updateFreelancer = asyncHandler(async (req, res, next) => {
       updateData.profilePicture = newFile._id;
     }
   }
-
+  console.log(req.body);
   const updatedFreelancer = await Freelancer.findByIdAndUpdate(
     req.params.id,
     { ...updateData, designation, department },
     { new: true, runValidators: true }
   )
     .populate({ path: "user", select: "email role" })
-    .populate("designation")
+    // .populate("designation")
     .populate("department")
     .populate("profilePicture");
   // .populate("addedBy")

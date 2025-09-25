@@ -29,7 +29,7 @@ export const createTeamPayment = asyncHandler(async (req, res, next) => {
     try {
       const newFile = await File.create({
         //uploadedBy: req.user._id,
-        filePath: file.path,
+        filePath: path.relative("public", file.path),
         mimeType: file.mimetype,
         fileSize: file.size,
         fileName: file.filename,
@@ -144,7 +144,7 @@ export const updateTeamPayment = asyncHandler(async (req, res, next) => {
       }
       const newFile = await File.create({
         //uploadedBy: req.user._id,
-        filePath: file.path,
+        filePath: path.relative("public", file.path),
         mimeType: file.mimetype,
         fileSize: file.size,
         fileName: file.filename,

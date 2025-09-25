@@ -203,7 +203,7 @@ const handleFiles = async (files, type) => {
     const filePromises = files.map((file) =>
       File.create({
         // uploadedBy: "some_user_id",
-        filePath: file.path,
+        filePath: path.relative("public", file.path),
         mimeType: file.mimetype,
         fileSize: file.size,
         fileName: file.filename,

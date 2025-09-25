@@ -9,14 +9,13 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
   const { isRead } = req.query;
   const filter = { recipient: req.user.id };
 
-  // Optional filter to get only unread notifications
   if (isRead === "false") {
     filter.isRead = false;
   }
 
   const notifications = await Notification.find(filter)
     .sort({ createdAt: -1 })
-    .limit(50); // Limit to the most recent 50 for performance
+    .limit(50); 
 
   res.status(200).json({
     success: true,

@@ -5,8 +5,8 @@ const clientSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     salutation: {
       type: String,
-      enum: ["Mr", "Mrs", "Ms", "Dr", "Other"],
-      default: "Mr",
+      enum: ["Mr.", "Mrs.", "Ms.", "Dr.", "Other"],
+      default: "Mr.",
     },
     category: { type: String, trim: true },
     gender: {
@@ -14,8 +14,9 @@ const clientSchema = new mongoose.Schema(
       enum: ["Male", "Female", "Other"],
       default: "Other",
     },
-    name: { type: String, required: true, trim: true },
+    name: { type: String, required: true, required: true, trim: true },
     country: { type: String, trim: true },
+    language: { type: String, trim: true },
     mobile: {
       countryCode: { type: String, trim: true },
       number: { type: String, trim: true },

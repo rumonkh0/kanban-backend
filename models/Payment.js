@@ -14,7 +14,7 @@ const paymentSchema = new mongoose.Schema(
     },
 
     toBePaid: { type: Number, required: true, default: 0 }, 
-    discount: { type: Number, default: 0 },
+    // discount: { type: Number, default: 0 },
 
     paymentDate: { type: Date },
     amountPaid: { type: Number, default: 0 },

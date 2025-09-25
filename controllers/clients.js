@@ -4,15 +4,15 @@ import fs from "fs";
 import Client from "../models/Client.js";
 import User from "../models/User.js";
 import File from "../models/File.js";
+import path from "path";
 
 // @desc      Get all clients
 // @route     GET /api/v1/clients
 // @access    Private/Admin
 export const getClients = asyncHandler(async (req, res, next) => {
-  const clients = await Client.find().populate({
-    path: "user",
-    select: "email role",
-  });
+  const clients = await Client.find()
+    .populate({ path: "user", select: "email" })
+    .populate({ path: "profilePicture", select: "filePath" });
 
   res.status(200).json({
     success: true,
@@ -25,10 +25,19 @@ export const getClients = asyncHandler(async (req, res, next) => {
 // @route     GET /api/v1/clients/:id
 // @access    Private/Admin
 export const getClient = asyncHandler(async (req, res, next) => {
-  const client = await Client.findById(req.params.id).populate({
-    path: "user",
-    select: "email role",
-  });
+  const client = await Client.findById(req.params.id)
+    .populate({
+      path: "user",
+      select: "email role",
+    })
+    .populate({
+      path: "profilePicture",
+      select: "filePath",
+    })
+    .populate({
+      path: "companyLogo",
+      select: "filePath",
+    });
 
   if (!client) {
     return next(
@@ -54,7 +63,7 @@ export const createClient = asyncHandler(async (req, res, next) => {
 
     const newImage = await File.create({
       // uploadedBy: req.user._id,
-      filePath: file.path,
+      filePath: path.relative("public", file.path),
       mimeType: file.mimetype,
       fileSize: file.size,
       fileName: file.filename,
@@ -68,7 +77,7 @@ export const createClient = asyncHandler(async (req, res, next) => {
     const file = req.files.companyLogo[0];
     const newImage = await File.create({
       // uploadedBy: req.user._id,
-      filePath: file.path,
+      filePath: path.relative("public", file.path),
       mimeType: file.mimetype,
       fileSize: file.size,
       fileName: file.filename,
@@ -84,15 +93,38 @@ export const createClient = asyncHandler(async (req, res, next) => {
     password,
     role: "Client",
   });
-  const client = await Client.create({
-    user: user._id,
-    ...profileData,
-    profilePicture,
-    companyLogo,
-  });
-
-  user.profile = client._id;
-  await user.save();
+  let client;
+  try {
+    client = await Client.create({
+      user: user._id,
+      ...profileData,
+      profilePicture,
+      companyLogo,
+    });
+    user.profile = client._id;
+    await user.save();
+  } catch (error) {
+    if (user) {
+      await user.deleteOne();
+    }
+    if (profilePicture) {
+      const deleteFile = await File.findById(profilePicture);
+      const fullPath = path.join("public", deleteFile.filePath);
+      fs.unlink(fullPath, (err) => {
+        if (err) console.error("Error deleting profile picture:", err);
+      });
+      if (deleteFile) await deleteFile.deleteOne();
+    }
+    if (companyLogo) {
+      const deleteFile = await File.findById(companyLogo);
+      const fullPath = path.join("public", deleteFile.filePath);
+      fs.unlink(fullPath, (err) => {
+        if (err) console.error("Error deleting company logo:", err);
+      });
+      if (deleteFile) await deleteFile.deleteOne();
+    }
+    return next(error);
+  }
 
   res.status(201).json({
     success: true,
@@ -105,6 +137,7 @@ export const createClient = asyncHandler(async (req, res, next) => {
 // @access    Private/Admin
 export const updateClient = asyncHandler(async (req, res, next) => {
   let client = await Client.findById(req.params.id);
+  console.log(req.body);
 
   if (!client) {
     return next(
@@ -117,11 +150,12 @@ export const updateClient = asyncHandler(async (req, res, next) => {
 
   if (req.files) {
     if (req.files.profilePicture) {
-      if (client.profilePicture) {
-        fs.unlink(client.profilePicture, (err) => {
+      const deleteFile = await File.findById(client.profilePicture);
+      if (deleteFile) {
+        const fullPath = path.join("public", deleteFile.filePath);
+        fs.unlink(fullPath, (err) => {
           if (err) console.error("Error deleting old profile picture:", err);
         });
-        const deleteFile = await File.findById(client.profilePicture);
         if (deleteFile) await deleteFile.deleteOne();
       }
 
@@ -130,7 +164,7 @@ export const updateClient = asyncHandler(async (req, res, next) => {
       try {
         const newImage = await File.create({
           // uploadedBy: req.user._id,
-          filePath: file.path,
+          filePath: path.relative("public", file.path),
           mimeType: file.mimetype,
           fileSize: file.size,
           fileName: file.filename,
@@ -139,7 +173,8 @@ export const updateClient = asyncHandler(async (req, res, next) => {
         });
         updateData.profilePicture = newImage._id;
       } catch (err) {
-        fs.unlink(file.path, (unlinkErr) => {
+        const fullPath = path.join("public", file.path);
+        fs.unlink(fullPath, (unlinkErr) => {
           if (unlinkErr)
             console.error("Error deleting newly uploaded file:", unlinkErr);
         });
@@ -154,11 +189,12 @@ export const updateClient = asyncHandler(async (req, res, next) => {
 
     if (req.files.companyLogo) {
       if (client.companyLogo) {
-        fs.unlink(client.companyLogo, (err) => {
+        const deleteFile = await File.findById(client.companyLogo);
+        const fullPath = path.join("public", deleteFile.filePath);
+        fs.unlink(fullPath, (err) => {
           if (err) console.error("Error deleting old company logo:", err);
         });
 
-        const deleteFile = await File.findById(client.companyLogo);
         if (deleteFile) await deleteFile.deleteOne();
       }
 
@@ -166,7 +202,7 @@ export const updateClient = asyncHandler(async (req, res, next) => {
       try {
         const newImage = await File.create({
           // uploadedBy: req.user._id,
-          filePath: file.path,
+          filePath: path.relative("public", file.path),
           mimeType: file.mimetype,
           fileSize: file.size,
           fileName: file.filename,
@@ -175,7 +211,8 @@ export const updateClient = asyncHandler(async (req, res, next) => {
         });
         updateData.companyLogo = newImage._id;
       } catch (err) {
-        fs.unlink(file.path, (unlinkErr) => {
+        const fullPath = path.join("public", file.path);
+        fs.unlink(fullPath, (unlinkErr) => {
           if (unlinkErr)
             console.error("Error deleting newly uploaded file:", unlinkErr);
         });
@@ -229,18 +266,25 @@ export const deleteClient = asyncHandler(async (req, res, next) => {
   }
 
   if (client.profilePicture) {
-    fs.unlink(client.profilePicture, (err) => {
-      if (err) console.error("Error deleting profile picture:", err);
-    });
     const deleteFile = await File.findById(client.profilePicture);
-    if (deleteFile) await deleteFile.deleteOne();
+    if (deleteFile) {
+      const fullPath = path.join("public", deleteFile.filePath);
+      fs.unlink(fullPath, (err) => {
+        if (err) console.error("Error deleting profile picture:", err);
+      });
+      await deleteFile.deleteOne();
+    }
   }
   if (client.companyLogo) {
-    fs.unlink(client.companyLogo, (err) => {
-      if (err) console.error("Error deleting company logo:", err);
-    });
     const deleteFile = await File.findById(client.companyLogo);
     if (deleteFile) await deleteFile.deleteOne();
+    {
+      const fullPath = path.join("public", deleteFile.filePath);
+      fs.unlink(fullPath, (err) => {
+        if (err) console.error("Error deleting company logo:", err);
+      });
+      await deleteFile.deleteOne();
+    }
   }
 
   await User.findByIdAndDelete(client.user);

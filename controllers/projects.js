@@ -62,7 +62,7 @@ export const createProject = asyncHandler(async (req, res, next) => {
       const filePromises = req.files.relatedFiles.map((file) =>
         File.create({
           //uploadedBy: req.user._id,
-          filePath: file.path,
+          filePath: path.relative("public", file.path),
           mimeType: file.mimetype,
           fileSize: file.size,
           fileName: file.filename,
@@ -236,7 +236,7 @@ export const updateProject = asyncHandler(async (req, res, next) => {
       const filePromises = req.files.relatedFiles.map((file) =>
         File.create({
           // uploadedBy: req.user._id,
-          filePath: file.path,
+          filePath: path.relative("public", file.path),
           mimeType: file.mimetype,
           fileSize: file.size,
           fileName: file.filename,

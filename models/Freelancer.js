@@ -6,14 +6,15 @@ const freelancerSchema = new mongoose.Schema(
     memberId: { type: String, unique: true, trim: true },
     salutation: {
       type: String,
-      enum: ["Mr", "Mrs", "Ms", "Dr"],
-      default: "Mr",
+      enum: ["Mr.", "Mrs.", "Ms.", "Dr."],
+      default: "Mr.",
     },
     name: { type: String, required: true, trim: true },
 
     designation: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Designation",
+      type: String,
+      // enum: ["Project Manager", "UI/UX Designer", "Other"],
+      // default: "Other",
     },
     department: {
       type: mongoose.Schema.Types.ObjectId,
