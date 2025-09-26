@@ -26,14 +26,15 @@ export const createProject = asyncHandler(async (req, res, next) => {
   } = req.body;
 
   // 1. Validate Service, Client, and Members
-  if (service) {
-    const existingService = await Service.findById(service).populate("members");
+  if (service && service !== "") {
+    const existingService = await Service.findById(service).populate(
+      "freelancers"
+    );
     if (!existingService) {
       return next(new ErrorResponse("Service not found.", 404));
     }
     members = existingService.members.map((member) => member._id);
   }
-
   if (client) {
     const existingClient = await Client.findById(client);
     if (!existingClient) {
@@ -50,6 +51,8 @@ export const createProject = asyncHandler(async (req, res, next) => {
       }
     }
   }
+
+
 
   // 2. Handle File Uploads
   let fileIds = [];

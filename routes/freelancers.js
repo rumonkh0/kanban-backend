@@ -11,7 +11,7 @@ import {
 } from "../controllers/freelancers.js";
 import teamPayments from "./teamPayments.js";
 
-const uploadDirectory = "public/uploads/client/";
+const uploadDirectory = "public/uploads/freelancer/";
 
 // Ensure that the upload directory exists; if not, create it
 if (!fs.existsSync(uploadDirectory)) {

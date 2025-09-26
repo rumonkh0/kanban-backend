@@ -10,7 +10,7 @@ const projectSchema = new mongoose.Schema(
     noDeadline: { type: Boolean, default: false },
 
     service: { type: mongoose.Schema.Types.ObjectId, ref: "Service" },
-    department: [{ type: String, trim: true }],
+    departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }],
 
     client: { type: mongoose.Schema.Types.ObjectId, ref: "Client" },
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: "Freelancer" }],

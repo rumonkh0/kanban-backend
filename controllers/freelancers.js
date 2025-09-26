@@ -7,6 +7,7 @@ import Department from "../models/Department.js";
 import Admin from "../models/AdminProfile.js";
 import File from "../models/File.js";
 import fs from "fs";
+import path from "path";
 
 // @desc      Create a freelancer
 // @route     POST /api/v1/freelancers
@@ -41,6 +42,7 @@ export const createFreelancer = asyncHandler(async (req, res, next) => {
       });
       profilePicture = newFile._id;
     } catch (err) {
+      const fullPath = path.join("public", file.path);
       fs.unlink(file.path, () => {}); // Clean up uploaded file on DB error
       return next(
         new ErrorResponse(`Failed to create file record: ${err.message}`, 500)
@@ -130,12 +132,13 @@ export const updateFreelancer = asyncHandler(async (req, res, next) => {
   }
 
   // Handle profile picture update
-  console.log(req.files);
+  // console.log(req.files);
   if (req.files) {
     if (req.files.profilePicture) {
       if (freelancer.profilePicture) {
         const oldFile = await File.findById(freelancer.profilePicture);
         if (oldFile) {
+          const fullPath = path.join("public", file.path);
           fs.unlink(oldFile.filePath, (err) => {
             if (err)
               console.error("Error deleting old profile picture file:", err);
@@ -157,7 +160,7 @@ export const updateFreelancer = asyncHandler(async (req, res, next) => {
       updateData.profilePicture = newFile._id;
     }
   }
-  console.log(req.body);
+  // console.log(req.body);
   const updatedFreelancer = await Freelancer.findByIdAndUpdate(
     req.params.id,
     { ...updateData, designation, department },
@@ -191,6 +194,7 @@ export const deleteFreelancer = asyncHandler(async (req, res, next) => {
   if (freelancer.profilePicture) {
     const file = await File.findById(freelancer.profilePicture);
     if (file) {
+      const fullPath = path.join("public", file.path);
       fs.unlink(file.filePath, (err) => {
         if (err) console.error("Error deleting profile picture file:", err);
       });
