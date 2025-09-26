@@ -145,7 +145,13 @@ export const updateProjectMember = asyncHandler(async (req, res, next) => {
 // @route     DELETE /api/v1/projectmembers/:id
 // @access    Private/Admin
 export const deleteProjectMember = asyncHandler(async (req, res, next) => {
-  const member = await ProjectMember.findById(req.params.id);
+  let member;
+  if (req.params.projectId)
+    member = await ProjectMember.findOne({
+      project: req.params.projectId,
+      freelancer: req.params.id,
+    });
+  else member = await ProjectMember.findById(req.params.id);
 
   if (!member) {
     return next(

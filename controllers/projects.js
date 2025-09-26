@@ -52,8 +52,6 @@ export const createProject = asyncHandler(async (req, res, next) => {
     }
   }
 
-
-
   // 2. Handle File Uploads
   let fileIds = [];
   if (
@@ -135,7 +133,14 @@ export const createProject = asyncHandler(async (req, res, next) => {
 export const getProjects = asyncHandler(async (req, res, next) => {
   const projects = await Project.find()
     .populate("service", "serviceName")
-    .populate("client", "name")
+    .populate({
+      path: "client",
+      select: "name profilePicture",
+      populate: {
+        path: "profilePicture",
+        select: "filePath",
+      },
+    })
     .populate({
       path: "members",
       select: "name profilePicture",
