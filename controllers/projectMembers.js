@@ -11,6 +11,7 @@ export const createProjectMember = asyncHandler(async (req, res, next) => {
   const { project, freelancer, haveToPay, amountPaid, ...associationData } =
     req.body;
 
+  // 1. Validation Checks
   const existingProject = await Project.findById(project);
   if (!existingProject) {
     return next(new ErrorResponse("Project not found.", 404));
@@ -30,23 +31,20 @@ export const createProjectMember = asyncHandler(async (req, res, next) => {
     );
   }
 
-  const amountOwed = haveToPay - amountPaid;
-
-  const member = await ProjectMember.create({
+  const member = new ProjectMember({
     project,
     freelancer,
     haveToPay,
-    amountPaid,
-    amountOwed,
     ...associationData,
   });
+
+  await member.save();
 
   res.status(201).json({
     success: true,
     data: member,
   });
 });
-
 // @desc      Get all project members (with optional filters)
 // @route     GET /api/v1/projectmembers
 // @route     GET /api/v1/projects/:projectId/members
@@ -123,17 +121,8 @@ export const updateProjectMember = asyncHandler(async (req, res, next) => {
       )
     );
   }
-
-  if (req.body.haveToPay !== undefined || req.body.amountPaid !== undefined) {
-    const newHaveToPay = req.body.haveToPay || member.haveToPay;
-    const newAmountPaid = req.body.amountPaid || member.amountPaid;
-    req.body.amountOwed = newHaveToPay - newAmountPaid;
-  }
-
-  member = await ProjectMember.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
+  Object.assign(member, req.body);
+  member = await member.save();
 
   res.status(200).json({
     success: true,

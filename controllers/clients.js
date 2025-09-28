@@ -5,6 +5,7 @@ import Client from "../models/Client.js";
 import User from "../models/User.js";
 import File from "../models/File.js";
 import path from "path";
+import Project from "../models/Project.js";
 
 // @desc      Get all clients
 // @route     GET /api/v1/clients
@@ -48,6 +49,99 @@ export const getClient = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     data: client,
+  });
+});
+
+export const getClientDetails = asyncHandler(async (req, res, next) => {
+  const clientId = req.params.id;
+
+  // 1. Find the Client Document
+  const client = await Client.findById(clientId)
+    .populate({
+      path: "user",
+      select: "email role",
+    })
+    .populate({
+      path: "profilePicture",
+      select: "filePath",
+    })
+    .populate({
+      path: "companyLogo",
+      select: "filePath",
+    });
+
+  if (!client) {
+    return next(
+      new ErrorResponse(`Client not found with id of ${clientId}`, 404)
+    );
+  }
+
+  // 2. Aggregate Project Data for the Client
+  const projectStats = await Project.aggregate([
+    {
+      // Match projects belonging to this specific client
+      $match: {
+        client: client._id, // Use the client's ObjectId
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        // Financial Metrics
+        totalProjects: { $sum: 1 }, // Count total projects
+        totalEarnings: { $sum: "$finalAmountEarned" }, // Sum of total profit (Net)
+        totalDue: { $sum: "$amountOwedByClient" }, // Sum of money still owed by the client
+        totalPayment: { $sum: "$finalAmountForClient" },
+        totalPaid: { $sum: "$amountPaidByClient" },
+
+        // Status Counts for the Graph
+        completed: {
+          $sum: { $cond: [{ $eq: ["$status", "Completed"] }, 1, 0] },
+        },
+        active: { $sum: { $cond: [{ $eq: ["$status", "Active"] }, 1, 0] } },
+        onHold: { $sum: { $cond: [{ $eq: ["$status", "On Hold"] }, 1, 0] } },
+      },
+    },
+    // Final projection to rename fields and remove _id
+    {
+      $project: {
+        _id: 0,
+        totalProjects: 1,
+        totalEarnings: { $round: ["$totalEarnings", 2] },
+        totalDue: { $round: ["$totalDue", 2] },
+        statusCounts: [
+          // Format status counts for the graph
+          { key: "Completed", value: "$completed" },
+          { key: "Active", value: "$active" },
+          { key: "On Hold", value: "$onHold" },
+        ],
+        paymentStatus: [
+          { key: "Total Paid", value: "$totalPaid" },
+          { key: "Total Due", value: "$totalDue" },
+        ],
+      },
+    },
+  ]);
+
+  // Extract the aggregation result (default to zero if no projects found)
+  const stats = projectStats[0] || {
+    totalProjects: 0,
+    totalEarnings: 0,
+    totalDue: 0,
+    statusCounts: [
+      { key: "Completed", value: 0 },
+      { key: "Active", value: 0 },
+      { key: "On Hold", value: 0 },
+    ],
+  };
+
+  // 3. Combine Data and Respond
+  res.status(200).json({
+    success: true,
+    data: {
+      ...client.toObject(), // Convert Mongoose document to plain object
+      ...stats, // Merge the aggregated statistics
+    },
   });
 });
 

@@ -46,6 +46,8 @@ const clientSchema = new mongoose.Schema(
     paymentMethods: [{ type: String, trim: true }],
     profilePicture: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
     companyLogo: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
+
+    lastLogin:  { type: Date },
   },
   { timestamps: true }
 );

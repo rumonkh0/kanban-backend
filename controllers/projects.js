@@ -164,7 +164,14 @@ export const getProjects = asyncHandler(async (req, res, next) => {
 export const getProject = asyncHandler(async (req, res, next) => {
   const project = await Project.findById(req.params.id)
     .populate("service", "serviceName")
-    .populate("client", "name")
+    .populate({
+      path: "client",
+      select: "name profilePicture user",
+      populate: [
+        { path: "profilePicture", select: "filePath" },
+        { path: "user", select: "email" },
+      ],
+    })
     .populate({
       path: "members",
       select: "name profilePicture",
@@ -191,6 +198,7 @@ export const getProject = asyncHandler(async (req, res, next) => {
 // @route     PUT /api/v1/projects/:id
 // @access    Private/Admin
 export const updateProject = asyncHandler(async (req, res, next) => {
+  // 1. Find the document
   let project = await Project.findById(req.params.id);
 
   if (!project) {
@@ -199,21 +207,35 @@ export const updateProject = asyncHandler(async (req, res, next) => {
     );
   }
 
+  // Destructure fields that require special handling or are for middleware
   const {
+    // Financial fields (will be passed to Object.assign)
     price,
     customPrice,
     discount,
-    amountPaidByClient,
+    amountPayableToMembers,
     amountPaidToMembers,
-    service,
+
+    // Relationship fields
     members,
+    service,
+
+    // Exclude calculated fields from direct assignment
+    amountOwedByClient,
+    finalAmountForClient,
+    amountPaidByClient,
+    amountOwedToMembers,
+    finalAmountEarned,
+
     ...updateData
   } = req.body;
 
   let newMembers = members;
   const oldMembers = project.members.map((memberId) => memberId.toString());
 
-  // 1. Handle member updates from a new service or direct members list
+  // --- 2. Relationship and File Handling ---
+
+  // Handle member updates from a new service or direct members list
   if (service) {
     const newService = await Service.findById(service).populate("members");
     if (!newService) {
@@ -222,7 +244,7 @@ export const updateProject = asyncHandler(async (req, res, next) => {
     newMembers = newService.members.map((member) => member._id);
   }
 
-  // If members were directly changed, validate the IDs
+  // Validate member IDs and prepare final member list
   if (newMembers) {
     for (const memberId of newMembers) {
       const existingMember = await Freelancer.findById(memberId);
@@ -234,7 +256,7 @@ export const updateProject = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // 2. Handle File Updates
+  // Handle File Updates
   if (
     req.files &&
     req.files.relatedFiles &&
@@ -243,16 +265,19 @@ export const updateProject = asyncHandler(async (req, res, next) => {
     try {
       const filePromises = req.files.relatedFiles.map((file) =>
         File.create({
-          // uploadedBy: req.user._id,
-          filePath: path.relative("public", file.path),
+          filePath: file.path,
           mimeType: file.mimetype,
           fileSize: file.size,
           fileName: file.filename,
           originalName: file.originalname,
           fileType: file.filename.split(".").pop(),
+          linkedTo: project._id,
+          linkedModel: "Project",
         })
       );
       const newFiles = await Promise.all(filePromises);
+
+      // Add new file IDs to the existing document array
       updateData.relatedFiles = [
         ...(project.relatedFiles || []),
         ...newFiles.map((file) => file._id),
@@ -260,72 +285,27 @@ export const updateProject = asyncHandler(async (req, res, next) => {
     } catch (err) {
       req.files.relatedFiles.forEach((file) => fs.unlink(file.path, () => {}));
       return next(
-        new ErrorResponse(`Failed to update file records: ${err.message}`, 500)
+        new ErrorResponse(`Failed to create file records: ${err.message}`, 500)
       );
     }
   }
 
-  // 3. Recalculate Financial Fields if any are updated
-  const newPrice = price !== undefined ? price : project.price;
-  const newCustomPrice =
-    customPrice !== undefined ? customPrice : project.customPrice;
-  const newDiscount = discount !== undefined ? discount : project.discount;
-
-  if (
-    price !== undefined ||
-    customPrice !== undefined ||
-    discount !== undefined
-  ) {
-    if (newCustomPrice !== null && newCustomPrice !== 0) {
-      updateData.finalAmountForClient = newCustomPrice;
-    } else {
-      updateData.finalAmountForClient =
-        newPrice - newPrice * (newDiscount / 100);
-    }
-  }
-
-  const newFinalAmount =
-    updateData.finalAmountForClient !== undefined
-      ? updateData.finalAmountForClient
-      : project.finalAmountForClient;
-  const newAmountPaidByClient =
-    amountPaidByClient !== undefined
-      ? amountPaidByClient
-      : project.amountPaidByClient;
-
-  if (
-    amountPaidByClient !== undefined ||
-    updateData.finalAmountForClient !== undefined
-  ) {
-    updateData.amountOwedByClient = newFinalAmount - newAmountPaidByClient;
-  }
-
-  const newAmountPaidToMembers =
-    amountPaidToMembers !== undefined
-      ? amountPaidToMembers
-      : project.amountPaidToMembers;
-
-  if (amountPaidByClient !== undefined || amountPaidToMembers !== undefined) {
-    updateData.finalAmountEarned =
-      newAmountPaidByClient - newAmountPaidToMembers;
-  }
-
-  // 4. Update ProjectMember documents more efficiently
+  // --- 3. Update ProjectMember Documents ---
   if (newMembers) {
     const newMembersSet = new Set(newMembers.map((id) => id.toString()));
     const oldMembersSet = new Set(oldMembers);
 
-    // Find members to delete (in oldMembers but not in newMembers)
-    // const membersToDelete = oldMembers.filter(id => !newMembersSet.has(id));
-
-    // Find members to add (in newMembers but not in oldMembers)
+    const membersToDelete = oldMembers.filter((id) => !newMembersSet.has(id));
     const membersToAdd = newMembers.filter(
       (id) => !oldMembersSet.has(id.toString())
     );
 
-    // if (membersToDelete.length > 0) {
-    //   await ProjectMember.deleteMany({ project: project._id, freelancer: { $in: membersToDelete } });
-    // }
+    if (membersToDelete.length > 0) {
+      await ProjectMember.deleteMany({
+        project: project._id,
+        freelancer: { $in: membersToDelete },
+      });
+    }
 
     if (membersToAdd.length > 0) {
       const memberCreationPromises = membersToAdd.map((freelancerId) =>
@@ -336,26 +316,23 @@ export const updateProject = asyncHandler(async (req, res, next) => {
       );
       await Promise.all(memberCreationPromises);
     }
+    // Update the project document's member list (before save)
+    updateData.members = newMembers;
   }
 
-  // 5. Perform the update on the Project document
-  project = await Project.findByIdAndUpdate(
-    req.params.id,
-    {
-      ...updateData,
-      price,
-      customPrice,
-      discount,
-      amountPaidByClient,
-      amountPaidToMembers,
-      service,
-      members: newMembers,
-    },
-    {
-      new: true,
-      runValidators: true,
-    }
-  );
+  // Ensure service field is updated
+  if (service) {
+    updateData.service = service;
+  }
+
+  // --- 4. Apply Updates and Trigger Hook ---
+
+  // Merge the existing document with all the new data from req.body
+  // This marks the relevant fields as modified.
+  Object.assign(project, req.body, updateData);
+
+  // Explicitly call save() to trigger pre('save') middleware
+  project = await project.save();
 
   res.status(200).json({
     success: true,

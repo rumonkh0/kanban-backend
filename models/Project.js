@@ -47,7 +47,7 @@ const projectSchema = new mongoose.Schema(
     },
 
     // Pricing and discount
-    price: { type: Number, default: 0 },
+    projectPrice: { type: Number, default: 0 },
     customPrice: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
     finalAmountForClient: { type: Number, default: 0 },
@@ -60,7 +60,7 @@ const projectSchema = new mongoose.Schema(
 
     // Team member payments
     amountPayableToMembers: { type: Number, default: 0 },
-    datePaidToMembers: { type: Date },
+    // datePaidToMembers: { type: Date },
     amountPaidToMembers: { type: Number, default: 0 },
     amountOwedToMembers: { type: Number, default: 0 },
 
@@ -69,9 +69,87 @@ const projectSchema = new mongoose.Schema(
 
     // Misc
     comments: { type: String },
+    archive: {type: Boolean, default: false},
+    pin: {type: Boolean, default: false},
+
   },
   { timestamps: true }
 );
+
+// ... existing schema definition ...
+
+// ... existing schema definition ...
+
+projectSchema.pre("save", function (next) {
+  // Flag to track if any calculation was made
+  let recalculateFinalAmountEarned = false;
+
+  // 1. --- Client Pricing Calculation ---
+  if (
+    this.isNew ||
+    this.isModified("projectPrice") ||
+    this.isModified("customPrice") ||
+    this.isModified("discount")
+  ) {
+    let basePrice = 0;
+
+    if (this.customPrice > 0) {
+      basePrice = this.customPrice;
+    } else {
+      basePrice = this.projectPrice;
+    }
+
+    if (this.discount > 0 && basePrice > 0) {
+      const discountAmount = basePrice * (this.discount / 100);
+      this.finalAmountForClient = basePrice - discountAmount;
+    } else {
+      this.finalAmountForClient = basePrice;
+    }
+    recalculateFinalAmountEarned = true;
+  }
+
+  // 2. --- Member Payment Calculation (Owed to Members) ---
+  if (
+    this.isModified("amountPayableToMembers") ||
+    this.isModified("amountPaidToMembers") ||
+    this.isNew
+  ) {
+    this.amountOwedToMembers =
+      this.amountPayableToMembers - this.amountPaidToMembers;
+
+    if (this.amountOwedToMembers < 0) {
+      this.amountOwedToMembers = 0;
+    }
+    recalculateFinalAmountEarned = true;
+  }
+
+  // 3. --- Client Owed Amount Calculation (FIXED TRIGGER) ---
+  // This runs if the billed amount changes OR if the total amount paid changes
+  // (which happens via the Payment model hook).
+  if (
+    this.isModified("finalAmountForClient") ||
+    this.isModified("amountPaidByClient") ||
+    this.isNew
+  ) {
+    // amountOwedByClient = finalAmountForClient - amountPaidByClient
+    this.amountOwedByClient =
+      this.finalAmountForClient - this.amountPaidByClient;
+
+    if (this.amountOwedByClient < 0) {
+      this.amountOwedByClient = 0;
+    }
+    recalculateFinalAmountEarned = true;
+  }
+
+  // 4. --- Final Earning Calculation (Net Profit) ---
+  if (recalculateFinalAmountEarned) {
+    this.finalAmountEarned =
+      this.finalAmountForClient - this.amountPayableToMembers;
+  }
+
+  next();
+});
+
 
 // Middleware to delete all associated ProjectMember documents when a Project is deleted
 projectSchema.pre(

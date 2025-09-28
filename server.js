@@ -34,6 +34,7 @@ import appreciations from "./routes/appreciations.js";
 import notes from "./routes/notes.js";
 import projectMembers from "./routes/projectMembers.js";
 import comments from "./routes/comments.js";
+import dashboard from "./routes/dashboard.js";
 
 const app = express();
 
@@ -78,6 +79,7 @@ app.use(
 
 // Mount routers
 app.use("/api/v1/auth", auth);
+app.use("/api/v1/dashboard", dashboard);
 app.use("/api/v1/clients", clients);
 app.use("/api/v1/freelancers", freelancers);
 app.use("/api/v1/projects", projects);

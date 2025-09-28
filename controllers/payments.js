@@ -3,8 +3,8 @@ import ErrorResponse from "../utils/errorResponse.js";
 import Payment from "../models/Payment.js";
 import File from "../models/File.js";
 import fs from "fs";
-import Client from "../models/Client.js";
 import Project from "../models/Project.js";
+import path from "path";
 
 // @desc      Create a payment
 // @route     POST /api/v1/payments
@@ -33,11 +33,13 @@ export const createPayment = asyncHandler(async (req, res, next) => {
   let payment = await Payment.create({
     ...paymentData,
     project,
+    projectPrice: existingProject.projectPrice,
     client: existingProject.client,
-    toBePaid,
+    haveToPay: existingProject.finalAmountForClient,
+    toBePaid: existingProject.amountOwedByClient,
     amountPaid,
-    amountOwed,
-    paymentStatus,
+    amountOwed: existingProject.amountOwedByClient - amountPaid,
+    // paymentStatus,
     paymentDate: amountPaid > 0 ? Date.now() : undefined,
   });
 
@@ -70,14 +72,14 @@ export const createPayment = asyncHandler(async (req, res, next) => {
   }
 
   // Update amountPaid on the Project
-  if (paymentStatus === "Paid")
-    if (amountPaid > 0) {
-      const projectDoc = await Project.findById(project);
-      if (projectDoc) {
-        projectDoc.amountPaid = (projectDoc.amountPaid || 0) + amountPaid;
-        await projectDoc.save();
-      }
-    }
+  // if (paymentStatus === "Paid")
+  //   if (amountPaid > 0) {
+  //     const projectDoc = await Project.findById(project);
+  //     if (projectDoc) {
+  //       projectDoc.amountPaid = (projectDoc.amountPaid || 0) + amountPaid;
+  //       await projectDoc.save();
+  //     }
+  //   }
 
   res.status(201).json({
     success: true,
@@ -98,10 +100,18 @@ export const getPayments = asyncHandler(async (req, res, next) => {
   if (req.params.clientId) {
     filter.client = req.params.clientId;
   }
-  const payments = await Payment.find(filter)
-    .populate("project", "name")
-    .populate("client", "name")
-    .populate("relatedFile", "fileName filePath originalName");
+  const payments = await Payment.find(filter).populate({
+    path: "project",
+    select: "projectName client",
+    populate: {
+      path: "client",
+      select: "name user profilePicture",
+      populate: [
+        { path: "profilePicture", select: "filePath" },
+        { path: "user", select: "email" },
+      ],
+    },
+  });
   res
     .status(200)
     .json({ success: true, count: payments.length, data: payments });
@@ -112,9 +122,18 @@ export const getPayments = asyncHandler(async (req, res, next) => {
 // @access    Private/Admin
 export const getPayment = asyncHandler(async (req, res, next) => {
   const payment = await Payment.findById(req.params.id)
-    .populate("project", "name")
-    .populate("client", "name")
-    .populate("relatedFile", "fileName filePath originalName");
+    .populate({
+      path: "project",
+      select: "projectName finalAmountForClient",
+    })
+    .populate({
+      path: "client",
+      select: "name user profilePicture",
+      populate: [
+        { path: "profilePicture", select: "filePath" },
+        { path: "user", select: "email" },
+      ],
+    });
   if (!payment) {
     return next(
       new ErrorResponse(`Payment not found with id of ${req.params.id}`, 404)
@@ -135,17 +154,7 @@ export const updatePayment = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // A 'Paid' record cannot be updated
-  if (payment.paymentStatus === "Paid") {
-    return next(
-      new ErrorResponse(
-        "Cannot update a payment record that is already marked as 'Paid'.",
-        400
-      )
-    );
-  }
-
-  const { toBePaid, amountPaid, ...updateData } = req.body;
+  const { toBePaid, amountPaid, invoiceNo, paidMethod, paymentDate } = req.body;
 
   // Calculate new amounts and status if relevant fields are present
   let newToBePaid = toBePaid !== undefined ? toBePaid : payment.toBePaid;
@@ -153,14 +162,7 @@ export const updatePayment = asyncHandler(async (req, res, next) => {
     amountPaid !== undefined ? amountPaid : payment.amountPaid;
   let newAmountOwed = newToBePaid - newAmountPaid;
 
-  let newStatus;
-  if (newAmountOwed <= 0) {
-    newStatus = "Paid";
-  } else if (newAmountPaid > 0) {
-    newStatus = "Partial";
-  } else {
-    newStatus = "Owed";
-  }
+  let relatedFile;
 
   // Handle file update
   if (req.files && req.files.relatedFile && req.files.relatedFile.length > 0) {
@@ -185,7 +187,7 @@ export const updatePayment = asyncHandler(async (req, res, next) => {
         linkedTo: payment._id,
         linkedModel: "Payment",
       });
-      updateData.relatedFile = newFile._id;
+      relatedFile = newFile._id;
     } catch (err) {
       fs.unlinkSync(file.path);
       return next(
@@ -194,26 +196,15 @@ export const updatePayment = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // Update amountPaid on the Project
-  const oldAmountPaid = payment.amountPaid;
-  if (newAmountPaid > oldAmountPaid) {
-    const projectDoc = await Project.findById(payment.project);
-    if (projectDoc) {
-      projectDoc.amountPaid =
-        (projectDoc.amountPaid || 0) + (newAmountPaid - oldAmountPaid);
-      await projectDoc.save();
-    }
-  }
-
   // Find and update the payment document
   payment = await Payment.findByIdAndUpdate(
     req.params.id,
     {
-      ...updateData,
-      toBePaid: newToBePaid,
       amountPaid: newAmountPaid,
-      amountOwed: newAmountOwed,
-      paymentStatus: newStatus,
+      invoiceNo,
+      paidMethod,
+      paymentDate,
+      relatedFile,
     },
     { new: true, runValidators: true }
   );

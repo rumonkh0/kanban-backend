@@ -5,22 +5,28 @@ import File from "../models/File.js";
 import fs from "fs";
 import Freelancer from "../models/Freelancer.js";
 import Project from "../models/Project.js";
+import ProjectMember from "../models/ProjectMember.js";
+import path from "path";
 
 // @desc      Create a team payment
 // @route     POST /api/v1/teampayments
 // @access    Private/Admin
 export const createTeamPayment = asyncHandler(async (req, res, next) => {
-  const { toBePaid, amountPaid, project, freelancer, ...paymentData } =
-    req.body;
-  const amountOwed = toBePaid - amountPaid;
+  const { amountPaid, project, member: freelancer, ...paymentData } = req.body;
 
   const existingProject = await Project.findById(project);
   if (!existingProject)
     return next(new ErrorResponse("Project not found.", 404));
 
-  const existingFreelancer = await Freelancer.findById(freelancer);
-  if (!existingFreelancer)
-    return next(new ErrorResponse("Freelancer not found.", 404));
+  const existingProjectFreelancer = await ProjectMember.findOne({
+    freelancer,
+    project,
+  });
+
+  if (!existingProjectFreelancer)
+    return next(
+      new ErrorResponse("Member is not associated with this project.", 404)
+    );
 
   // Handle file upload
   let relatedFile = null;
@@ -45,16 +51,18 @@ export const createTeamPayment = asyncHandler(async (req, res, next) => {
     }
   }
 
+  const amountOwed = existingProjectFreelancer.amountOwed - amountPaid;
+
   const teamPayment = await TeamPayment.create({
     ...paymentData,
     project,
     freelancer,
-    toBePaid,
+    toBePaid: existingProjectFreelancer.amountOwed,
     amountPaid,
     amountOwed,
     relatedFile,
-    paymentStatus:
-      amountOwed <= 0 ? "Paid" : amountPaid > 0 ? "Partial" : "Owed",
+    // paymentStatus:
+    //   amountOwed <= 0 ? "Paid" : amountPaid > 0 ? "Partial" : "Owed",
   });
 
   res.status(201).json({
@@ -79,9 +87,19 @@ export const getTeamPayments = asyncHandler(async (req, res, next) => {
   }
 
   const teamPayments = await TeamPayment.find(filter)
-    .populate("project", "name")
-    .populate("freelancer", "name")
-    .populate("relatedFile", "fileName filePath originalName");
+    .populate({
+      path: "project",
+      select: "projectName amountPayableToMembers",
+    })
+    .populate({
+      path: "freelancer",
+      select: "name user profilePicture",
+      populate: [
+        { path: "user", select: "email" },
+        { path: "profilePicture", select: "filePath" },
+      ],
+    })
+    .populate("relatedFile", "filePath");
 
   res.status(200).json({
     success: true,
@@ -95,10 +113,19 @@ export const getTeamPayments = asyncHandler(async (req, res, next) => {
 // @access    Private/Admin
 export const getTeamPayment = asyncHandler(async (req, res, next) => {
   const teamPayment = await TeamPayment.findById(req.params.id)
-    .populate("project", "name")
-    .populate("freelancer", "name")
-    .populate("relatedFile", "fileName filePath originalName");
-
+    .populate({
+      path: "project",
+      select: "projectName amountPayableToMembers",
+    })
+    .populate({
+      path: "freelancer",
+      select: "name user profilePicture",
+      populate: [
+        { path: "user", select: "email" },
+        { path: "profilePicture", select: "filePath" },
+      ],
+    })
+    .populate("relatedFile", "filePath");
   if (!teamPayment) {
     return next(
       new ErrorResponse(

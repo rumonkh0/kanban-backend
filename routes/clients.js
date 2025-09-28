@@ -5,6 +5,7 @@ import {
   createClient,
   deleteClient,
   getClient,
+  getClientDetails,
   getClients,
   updateClient,
 } from "../controllers/clients.js";
@@ -57,6 +58,7 @@ const router = express.Router();
 router.use("/:projectId/payments", payments);
 
 router.route("/").post(uploadFields, createClient).get(getClients);
+router.get("/:id/details", getClientDetails);
 router
   .route("/:id")
   .get(getClient)
