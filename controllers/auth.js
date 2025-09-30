@@ -206,9 +206,9 @@ const sendTokenResponse = (user, statusCode, res) => {
   //   maxAge: 1000 * 60 * 60 * 24, // 1 day
   // };
 
-  if (process.env.NODE_ENV === "production") {
-    options.secure = true;
-  }
+  // if (process.env.NODE_ENV === "production") {
+  //   options.secure = true;
+  // }
 
   res.status(statusCode).json({
     success: true,
