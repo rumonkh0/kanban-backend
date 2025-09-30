@@ -64,7 +64,7 @@ app.use(limiter);
 
 // Enable CORS
 const allowedOrigins = [
-  "https://kanban-eight-sigma.vercel.app/",
+  "https://kanban-eight-sigma.vercel.app",
   "http://localhost:5173", // local dev
   "http://192.168.1.7:5173", // local dev
 ];
@@ -77,7 +77,7 @@ app.use(
         callback(new Error("Not allowed by CORS"));
       }
     },
-    // credentials: true, // allow cookies / auth headers
+    // credentials: true, /
   })
 );
 

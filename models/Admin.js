@@ -2,12 +2,10 @@ import mongoose from "mongoose";
 
 const adminprofileSchema = new mongoose.Schema(
   {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, lowercase: true, trim: true },
-    password: { type: String, required: true, select: false }, // hash in backend
-
-    emailNotifications: { type: Boolean, default: true }, // converted from "Yes"/"No"
-    googleCalendar: { type: Boolean, default: true }, // converted from "Yes"/"No"
+    emailNotifications: { type: Boolean, default: true }, 
+    googleCalendar: { type: Boolean, default: true }, 
 
     country: { type: String, default: "USA", trim: true },
     mobile: {
