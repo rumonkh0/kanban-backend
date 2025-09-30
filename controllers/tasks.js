@@ -5,6 +5,7 @@ import Project from "../models/Project.js";
 import Stage from "../models/Stage.js";
 import Freelancer from "../models/Freelancer.js";
 import File from "../models/File.js";
+import { generateKeyBetween } from "fractional-indexing";
 import fs from "fs";
 
 // @desc      Create a task
@@ -12,14 +13,18 @@ import fs from "fs";
 // @access    Private/Admin
 export const createTask = asyncHandler(async (req, res, next) => {
   const { projectId, stageId } = req.params;
+  // console.log(req.body);
+  if (projectId) req.body.project = projectId;
+  if (stageId) req.body.stage = stageId;
+  // console.log(req.body.stage, req.body.project);
   const { members, ...taskData } = req.body;
 
   // 1. Validate existence of Project, Stage, and Members
-  const existingProject = await Project.findById(projectId);
+  const existingProject = await Project.findById(req.body.project);
   if (!existingProject) {
     return next(new ErrorResponse("Project not found.", 404));
   }
-  const existingStage = await Stage.findById(stageId);
+  const existingStage = await Stage.findById(req.body.stage);
   if (!existingStage) {
     return next(new ErrorResponse("Stage not found.", 404));
   }
@@ -35,24 +40,23 @@ export const createTask = asyncHandler(async (req, res, next) => {
   }
 
   // 2. Automatically determine the 'order' for the new task
-  const lastTask = await Task.findOne({ stage: stageId })
+  const lastTask = await Task.findOne({ stage: req.body.stage })
     .sort({ order: -1 })
     .select("order");
-  const newOrder = lastTask ? lastTask.order + 1 : 1;
+  // console.log(lastTask);
+  const newOrder = lastTask ? lastTask.order + "a" : "a";
 
   // 3. Handle File Uploads (assuming multer passes files in req.files)
   let fileIds = [];
   let imageIds = [];
 
-  fileIds = await handleFiles(req.files.files, "file");
-  imageIds = await handleFiles(req.files.images, "image");
+  fileIds = await handleFiles(req.files?.files, "file");
+  imageIds = await handleFiles(req.files?.images, "image");
 
   const task = await Task.create({
     ...taskData,
-    project: projectId,
-    stage: stageId,
     members,
-    order: newOrder,
+    // order: newOrder,
     files: fileIds,
     images: imageIds,
   });
@@ -76,14 +80,15 @@ export const getTasks = asyncHandler(async (req, res, next) => {
     filter.stage = req.params.stageId;
   }
 
+  // console.log(req.params);
   const tasks = await Task.find(filter)
-    .populate("project", "projectName")
-    .populate("stage", "title")
+    // .populate("project", "projectName")
+    // .populate("stage", "title")
     .populate("members", "name profilePicture")
-    .populate("files", "originalName filePath")
+    // .populate("files", "originalName filePath")
     .populate("images", "originalName filePath")
     //.populate("comments.author", "name")
-    .sort({ order: 1 });
+    .sort({ stage: 1, order: 1 });
 
   res.status(200).json({
     success: true,
@@ -154,6 +159,66 @@ export const updateTask = asyncHandler(async (req, res, next) => {
     new: true,
     runValidators: true,
   });
+
+  res.status(200).json({
+    success: true,
+    data: task,
+  });
+});
+
+// @desc      Update a Task Order
+// @route     PUT /api/v1/task/:id/reorder
+// @access    Private/Admin
+export const updateTaskOrder = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  let task = await Task.findById(id);
+  if (!task) {
+    return next(new ErrorResponse(`Task not found with id of ${id}`, 404));
+  }
+  if (req.body.newStage) task.stage = req.body.newStage;
+
+  let prevTask = await Task.findById(req.body.prev);
+  let nextTask = await Task.findById(req.body.next);
+  console.log(prevTask?.title, nextTask?.title);
+
+  if (prevTask && nextTask)
+    if (prevTask.stage !== nextTask)
+      return next(new ErrorResponse(`Invalid request`, 403));
+
+  if (!prevTask && !nextTask) {
+    prevTask = await Task.findOne({
+      project: task.project,
+      stage: req.body.newStage,
+    }).sort({
+      order: -1,
+    });
+  } else {
+    if (!nextTask)
+      prevTask = await Task.findOne({
+        project: task.project,
+        stage: req.body.newStage,
+      }).sort({ order: -1 });
+    if (!prevTask)
+      nextTask = await Task.findOne({
+        project: task.project,
+        stage: req.body.newStage,
+      }).sort({ order: 1 });
+  }
+  try {
+    console.log("=======================================");
+    console.log("|||||||||||||||||||||||||||||||||||||||");
+    console.log(prevTask?.title, nextTask?.title);
+    task.order = generateKeyBetween(prevTask?.order, nextTask?.order);
+    console.log(task.order);
+
+    await task.save();
+  } catch (error) {
+    console.log(error)
+    return next(new ErrorResponse(`Task can't update`, 304));
+  }
+  // console.log(req.body);
+  console.log(task);
 
   res.status(200).json({
     success: true,

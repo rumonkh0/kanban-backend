@@ -4,7 +4,7 @@ import Freelancer from "../models/Freelancer.js";
 import User from "../models/User.js";
 import Designation from "../models/Designation.js";
 import Department from "../models/Department.js";
-import Admin from "../models/AdminProfile.js";
+import Admin from "../models/Admin.js";
 import File from "../models/File.js";
 import fs from "fs";
 import path from "path";
@@ -50,20 +50,27 @@ export const createFreelancer = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // 4. Create the freelancer profile
-  const freelancer = await Freelancer.create({
-    user: user._id,
-    department,
-    addedBy,
-    profilePicture,
-    ...freelancerData,
-  });
-
+  let freelancer;
+  try {
+    freelancer = await Freelancer.create({
+      user: user._id,
+      department,
+      addedBy,
+      profilePicture,
+      ...freelancerData,
+    });
+    user.profile = freelancer._id;
+    await user.save();
+  } catch (error) {
+    const lo = await user.deleteOne();
+    console.log(lo);
+    return next(error);
+  }
   // 5. Link the freelancer profile to the universal user
-  user.profile = freelancer._id;
-  await user.save();
 
-  res.status(201).json({ success: true, data: freelancer });
+  res
+    .status(201)
+    .json({ success: true, message: "Freelancer Created", data: freelancer });
 });
 
 // @desc      Get all freelancers

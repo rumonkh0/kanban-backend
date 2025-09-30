@@ -3,7 +3,13 @@ import mongoose from "mongoose";
 const freelancerSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    memberId: { type: String, unique: true, trim: true },
+    memberId: {
+      type: String,
+      unique: true,
+      trim: true,
+      required: [true, "Member ID is required"],
+      minlength: [1, "Member ID cannot be empty"],
+    },
     salutation: {
       type: String,
       enum: ["Mr.", "Mrs.", "Ms.", "Dr."],

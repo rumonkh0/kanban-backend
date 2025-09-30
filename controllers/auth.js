@@ -158,7 +158,9 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
   }
 
   // Find the user by their email
-  const user = await User.findOne({ email }).select("+resetPasswordToken +resetPasswordExpire");
+  const user = await User.findOne({ email }).select(
+    "+resetPasswordToken +resetPasswordExpire"
+  );
 
   if (!user) {
     return next(new ErrorResponse("User not found.", 404));
@@ -195,18 +197,20 @@ const sendTokenResponse = (user, statusCode, res) => {
   // Create token
   const token = user.getSignedJwtToken();
 
-  const options = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000
-    ),
-    httpOnly: true,
-  };
+  // const options = {
+  //   expires: new Date(
+  //     Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000
+  //   ),
+  //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  //   secure: process.env.NODE_ENV === "production",
+  //   maxAge: 1000 * 60 * 60 * 24, // 1 day
+  // };
 
   if (process.env.NODE_ENV === "production") {
     options.secure = true;
   }
 
-  res.status(statusCode).cookie("token", token, options).json({
+  res.status(statusCode).json({
     success: true,
     token,
   });

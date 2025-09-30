@@ -10,6 +10,7 @@ import {
   deleteFreelancer,
 } from "../controllers/freelancers.js";
 import teamPayments from "./teamPayments.js";
+import { authorize, protect } from "../middleware/auth.js";
 
 const uploadDirectory = "public/uploads/freelancer/";
 
@@ -52,6 +53,8 @@ const uploadFields = upload.fields([{ name: "profilePicture", maxCount: 1 }]);
 const router = express.Router();
 router.use("/:projectId/team-payments", teamPayments);
 
+router.use(protect);
+// router.use(authorize("Admin"));
 router.route("/").get(getFreelancers).post(uploadFields, createFreelancer);
 
 router

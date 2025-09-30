@@ -8,6 +8,7 @@ import {
   getTask,
   updateTask,
   deleteTask,
+  updateTaskOrder,
 } from "../controllers/tasks.js";
 import comments from "./comments.js";
 
@@ -54,7 +55,7 @@ const uploadFields = upload.fields([
 ]);
 
 router.route("/").post(uploadFields, createTask).get(getTasks);
-
+router.put("/:id/reorder", updateTaskOrder);
 router
   .route("/:id")
   .get(getTask)

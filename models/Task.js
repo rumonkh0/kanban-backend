@@ -30,7 +30,7 @@ const taskSchema = new mongoose.Schema(
     files: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
     images: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
 
-    order: { type: Number, default: 0 },
+    order: { type: String, default: "a" },
 
     status: {
       type: String,

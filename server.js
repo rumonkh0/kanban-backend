@@ -63,7 +63,23 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Enable CORS
-app.use(cors());
+const allowedOrigins = [
+  "https://kanban-eight-sigma.vercel.app/",
+  "http://localhost:5173", // local dev
+  "http://192.168.1.7:5173", // local dev
+];
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, origin); // allow this origin
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    // credentials: true, // allow cookies / auth headers
+  })
+);
 
 // Set static folder
 
