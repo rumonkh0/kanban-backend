@@ -2,6 +2,9 @@ import asyncHandler from "../middleware/async.js";
 import ErrorResponse from "../utils/errorResponse.js";
 import Comment from "../models/Comment.js";
 import Task from "../models/Task.js";
+import { populate } from "dotenv";
+import User from "../models/User.js";
+import Admin from "../models/Admin.js";
 
 // @desc      Create a new comment
 // @route     POST /api/v1/tasks/:taskId/comments
@@ -39,10 +42,23 @@ export const getComments = asyncHandler(async (req, res, next) => {
   if (!existingTask) {
     return next(new ErrorResponse("Task not found.", 404));
   }
-  
+
   const comments = await Comment.find({ task: taskId })
-    .populate("author", "name email") // Populate author details
-    .sort({ createdAt: 1 }); // Sort by creation date for chronological order
+    .populate({
+      path: "author",
+      select: "email role profile",
+      populate: {
+        path: "profile",
+        select: "name profilePicture",
+        populate: {
+          path: "profilePicture",
+          select: "filePath",
+        },
+      },
+    })
+    .sort({ createdAt: 1 });
+  // const usr = await Admin.findById(comments[0].author.profile);
+  // console.log(usr);
 
   res.status(200).json({
     success: true,
@@ -63,9 +79,11 @@ export const updateComment = asyncHandler(async (req, res, next) => {
   if (!comment) {
     return next(new ErrorResponse(`Comment not found with id of ${id}`, 404));
   }
-  
-  if (comment.author.toString() !== req.user.id && req.user.role !== 'admin') {
-    return next(new ErrorResponse(`Not authorized to update this comment`, 401));
+
+  if (comment.author.toString() !== req.user.id && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(`Not authorized to update this comment`, 401)
+    );
   }
 
   comment = await Comment.findByIdAndUpdate(
@@ -94,11 +112,13 @@ export const deleteComment = asyncHandler(async (req, res, next) => {
   if (!comment) {
     return next(new ErrorResponse(`Comment not found with id of ${id}`, 404));
   }
-  
-  if (comment.author.toString() !== req.user.id && req.user.role !== 'admin') {
-    return next(new ErrorResponse(`Not authorized to delete this comment`, 401));
+
+  if (comment.author.toString() !== req.user.id && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(`Not authorized to delete this comment`, 401)
+    );
   }
-  
+
   await comment.deleteOne();
 
   res.status(200).json({

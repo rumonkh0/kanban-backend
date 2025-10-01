@@ -13,7 +13,7 @@ import {
 import comments from "./comments.js";
 
 const router = express.Router({ mergeParams: true });
-router.use("/:projectId/comments", comments);
+router.use("/:taskId/comments", comments);
 
 const uploadDirectory = "public/uploads/tasks/";
 

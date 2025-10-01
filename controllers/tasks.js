@@ -13,10 +13,8 @@ import fs from "fs";
 // @access    Private/Admin
 export const createTask = asyncHandler(async (req, res, next) => {
   const { projectId, stageId } = req.params;
-  // console.log(req.body);
   if (projectId) req.body.project = projectId;
   if (stageId) req.body.stage = stageId;
-  // console.log(req.body.stage, req.body.project);
   const { members, ...taskData } = req.body;
 
   // 1. Validate existence of Project, Stage, and Members
@@ -43,7 +41,6 @@ export const createTask = asyncHandler(async (req, res, next) => {
   const lastTask = await Task.findOne({ stage: req.body.stage })
     .sort({ order: -1 })
     .select("order");
-  // console.log(lastTask);
   const newOrder = lastTask ? lastTask.order + "a" : "a";
 
   // 3. Handle File Uploads (assuming multer passes files in req.files)
@@ -82,12 +79,29 @@ export const getTasks = asyncHandler(async (req, res, next) => {
 
   // console.log(req.params);
   const tasks = await Task.find(filter)
-    // .populate("project", "projectName")
+    .populate("project", "projectName")
     // .populate("stage", "title")
     .populate("members", "name profilePicture")
-    // .populate("files", "originalName filePath")
-    .populate("images", "originalName filePath")
-    //.populate("comments.author", "name")
+    .populate({
+      path: "files",
+      select: "originalName filePath",
+    })
+    .populate({
+      path: "images",
+      select: "originalName filePath",
+    })
+    .populate({
+      path: "comments",
+      options: { sort: { createdAt: 1 } },
+      populate: {
+        path: "author",
+        select: "email",
+        // populate: {
+        //   path: "profile",
+        //   select: "filePath",
+        // },
+      },
+    })
     .sort({ stage: 1, order: 1 });
 
   res.status(200).json({
@@ -102,7 +116,18 @@ export const getTasks = asyncHandler(async (req, res, next) => {
 // @access    Private
 export const getTask = asyncHandler(async (req, res, next) => {
   const task = await Task.findById(req.params.id)
-    .populate("project", "projectName")
+    .populate({
+      path: "project",
+      select: "projectName client",
+      populate: {
+        path: "client",
+        select: "name profilePicture",
+        populate: {
+          path: "profilePicture",
+          select: "filePath",
+        },
+      },
+    })
     .populate("stage", "title")
     .populate("members", "name profilePicture")
     .populate("files", "originalName filePath")
@@ -180,7 +205,6 @@ export const updateTaskOrder = asyncHandler(async (req, res, next) => {
 
   let prevTask = await Task.findById(req.body.prev);
   let nextTask = await Task.findById(req.body.next);
-  console.log(prevTask?.title, nextTask?.title);
 
   if (prevTask && nextTask)
     if (prevTask.stage !== nextTask)
@@ -206,19 +230,11 @@ export const updateTaskOrder = asyncHandler(async (req, res, next) => {
       }).sort({ order: 1 });
   }
   try {
-    console.log("=======================================");
-    console.log("|||||||||||||||||||||||||||||||||||||||");
-    console.log(prevTask?.title, nextTask?.title);
     task.order = generateKeyBetween(prevTask?.order, nextTask?.order);
-    console.log(task.order);
-
     await task.save();
   } catch (error) {
-    console.log(error)
     return next(new ErrorResponse(`Task can't update`, 304));
   }
-  // console.log(req.body);
-  console.log(task);
 
   res.status(200).json({
     success: true,

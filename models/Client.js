@@ -47,7 +47,6 @@ const clientSchema = new mongoose.Schema(
     profilePicture: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
     companyLogo: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
 
-    lastLogin:  { type: Date },
   },
   { timestamps: true }
 );

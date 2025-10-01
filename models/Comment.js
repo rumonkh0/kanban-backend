@@ -5,7 +5,7 @@ const commentSchema = new mongoose.Schema(
     content: { type: String, required: true, trim: true },
     author: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // or Admin/Freelancer, based on your auth
+      ref: "User",
       required: true,
     },
     task: {

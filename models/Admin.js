@@ -1,11 +1,11 @@
 import mongoose from "mongoose";
 
-const adminprofileSchema = new mongoose.Schema(
+const adminSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     name: { type: String, required: true, trim: true },
-    emailNotifications: { type: Boolean, default: true }, 
-    googleCalendar: { type: Boolean, default: true }, 
+    emailNotifications: { type: Boolean, default: true },
+    googleCalendar: { type: Boolean, default: true },
 
     country: { type: String, default: "USA", trim: true },
     mobile: {
@@ -34,9 +34,10 @@ const adminprofileSchema = new mongoose.Schema(
       countryCode: { type: String, trim: true },
       number: { type: String, trim: true },
     },
+    profilePicture: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
     // role: "admin",
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Admin", adminprofileSchema);
+export default mongoose.model("Admin", adminSchema);

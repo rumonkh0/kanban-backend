@@ -15,7 +15,9 @@ export const login = asyncHandler(async (req, res, next) => {
   }
 
   // Check for user
-  const user = await User.findOne({ email }).select("+password");
+  const user = await User.findOne({ email })
+    .select("+password")
+    .populate("profile");
 
   if (!user) {
     return next(new ErrorResponse("Invalid credentials", 401));
@@ -209,7 +211,7 @@ const sendTokenResponse = (user, statusCode, res) => {
   // if (process.env.NODE_ENV === "production") {
   //   options.secure = true;
   // }
-
+  user = { email: user.email, role: user.role, user: user.profile };
   res.status(statusCode).json({
     success: true,
     token,

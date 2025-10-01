@@ -114,7 +114,7 @@ projectMemberSchema.pre("save", async function (next) {
     if (newTotalPayable > project.amountPayableToMembers) {
       return next(
         new Error(
-          `The total 'haveToPay' for all members (${newTotalPayable}) cannot exceed the Project's total payable amount (${project.amountPayableToMembers}).`
+          `The total 'haveToPay' for all members-(${newTotalPayable}) cannot exceed the Project's total payable amount-(${project.amountPayableToMembers}).`
         )
       );
     }

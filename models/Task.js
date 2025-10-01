@@ -41,6 +41,16 @@ const taskSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-taskSchema.index({ stage: 1, order: 1 }, { unique: true });
+taskSchema.virtual("comments", {
+  ref: "Comment",
+  localField: "_id",
+  foreignField: "task",
+  justOne: false,
+});
+
+taskSchema.set("toObject", { virtuals: true });
+taskSchema.set("toJSON", { virtuals: true });
+
+taskSchema.index({ project: 1, stage: 1, order: 1 }, { unique: true });
 
 export default mongoose.model("Task", taskSchema);

@@ -56,11 +56,11 @@ if (process.env.NODE_ENV === "development") {
 app.use(helmet());
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 mins
-  max: 1000,
-});
-app.use(limiter);
+// const limiter = rateLimit({
+//   windowMs: 10 * 60 * 1000, // 10 mins
+//   max: 1000,
+// });
+// app.use(limiter);
 
 // Enable CORS
 const allowedOrigins = [
@@ -109,7 +109,7 @@ app.use("/api/v1/designations", designations);
 app.use("/api/v1/departments", departments);
 app.use("/api/v1/appreciations", appreciations);
 app.use("/api/v1/notes", notes);
-app.use("/api/v1/projectMembers", projectMembers);
+app.use("/api/v1/projectmembers", projectMembers);
 app.use("/api/v1/comments", comments);
 
 app.get("/api/v1/", (req, res) => {

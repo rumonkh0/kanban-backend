@@ -135,6 +135,7 @@ export const updateProjectMember = asyncHandler(async (req, res, next) => {
 // @access    Private/Admin
 export const deleteProjectMember = asyncHandler(async (req, res, next) => {
   let member;
+  console.log(req.params.projectId, req.params.id);
   if (req.params.projectId)
     member = await ProjectMember.findOne({
       project: req.params.projectId,
