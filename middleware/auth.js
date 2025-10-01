@@ -15,7 +15,7 @@ export const protect = asyncHandler(async (req, res, next) => {
     token = req.headers.authorization.split(" ")[1];
     // Set token from cookie
   }
-  // else 
+  // else
   //   if (req.cookies.token) {
   //   token = req.cookies.token;
   // }
@@ -31,6 +31,7 @@ export const protect = asyncHandler(async (req, res, next) => {
 
     req.user = await User.findById(decoded.id).populate("profile");
 
+    console.log(req.user);
     next();
   } catch (err) {
     return next(new ErrorResponse("Not authorized to access this route", 401));
