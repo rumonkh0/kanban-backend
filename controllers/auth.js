@@ -29,6 +29,9 @@ export const login = asyncHandler(async (req, res, next) => {
   if (!isMatch) {
     return next(new ErrorResponse("Invalid credentials", 401));
   }
+  
+  user.lastLogin = Date.now();
+  await user.save();
 
   sendTokenResponse(user, 200, res);
 });

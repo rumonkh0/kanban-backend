@@ -131,7 +131,7 @@ export const createProject = asyncHandler(async (req, res, next) => {
 // @route     GET /api/v1/projects
 // @access    Private
 export const getProjects = asyncHandler(async (req, res, next) => {
-  const projects = await Project.find()
+  const projects = await Project.find(req.query)
     .populate("service", "serviceName")
     .populate({
       path: "client",

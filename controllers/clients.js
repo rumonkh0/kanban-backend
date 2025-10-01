@@ -11,8 +11,9 @@ import Project from "../models/Project.js";
 // @route     GET /api/v1/clients
 // @access    Private/Admin
 export const getClients = asyncHandler(async (req, res, next) => {
-  const clients = await Client.find()
-    .populate({ path: "user", select: "email" })
+  console.log(req.query);
+  const clients = await Client.find(req.query)
+    .populate({ path: "user", select: "email lastLogin" })
     .populate({ path: "profilePicture", select: "filePath" });
 
   res.status(200).json({
@@ -29,7 +30,7 @@ export const getClient = asyncHandler(async (req, res, next) => {
   const client = await Client.findById(req.params.id)
     .populate({
       path: "user",
-      select: "email role",
+      select: "email role lastLogin",
     })
     .populate({
       path: "profilePicture",
@@ -59,7 +60,7 @@ export const getClientDetails = asyncHandler(async (req, res, next) => {
   const client = await Client.findById(clientId)
     .populate({
       path: "user",
-      select: "email role",
+      select: "email role lastLogin",
     })
     .populate({
       path: "profilePicture",
