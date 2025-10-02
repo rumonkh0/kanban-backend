@@ -7,6 +7,7 @@ import Freelancer from "../models/Freelancer.js";
 import File from "../models/File.js";
 import { generateKeyBetween } from "fractional-indexing";
 import fs from "fs";
+import path from "path";
 
 // @desc      Create a task
 // @route     POST /api/v1/projects/:projectId/stages/:stageId/tasks
@@ -81,13 +82,24 @@ export const getTasks = asyncHandler(async (req, res, next) => {
   const tasks = await Task.find(filter)
     .populate("project", "projectName")
     // .populate("stage", "title")
-    .populate("members", "name profilePicture")
+    .populate({
+      path: "members",
+      select: "name profilePicture",
+      populate: {
+        path: "profilePicture",
+        select: "filePath",
+      },
+    })
     .populate({
       path: "files",
       select: "originalName filePath",
     })
     .populate({
       path: "images",
+      select: "originalName filePath",
+    })
+    .populate({
+      path: "coverImage",
       select: "originalName filePath",
     })
     .populate({
@@ -129,9 +141,10 @@ export const getTask = asyncHandler(async (req, res, next) => {
       },
     })
     .populate("stage", "title")
-    .populate("members", "name profilePicture")
+    // .populate("members", "name profilePicture")
     .populate("files", "originalName filePath")
-    .populate("images", "originalName filePath");
+    .populate("images", "originalName filePath")
+    .populate("coverImage", "originalName filePath");
   //.populate("comments.author", "name");
 
   if (!task) {
@@ -158,15 +171,25 @@ export const updateTask = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // 1. Handle re-ordering if stage is changed
-  if (req.body.stage && req.body.stage.toString() !== task.stage.toString()) {
-    const lastTaskInNewStage = await Task.findOne({ stage: req.body.stage })
-      .sort({ order: -1 })
-      .select("order");
-    req.body.order = lastTaskInNewStage ? lastTaskInNewStage.order + 1 : 1;
+  const existingFileIds = req.body.files || [];
+
+  const filesToRemove = task.files.filter(
+    (f) => !existingFileIds.includes(f._id.toString())
+  );
+
+  for (const file of filesToRemove) {
+    if (file.filePath) {
+      try {
+        fs.unlinkSync(path.join(__dirname, "../uploads", file.filePath));
+      } catch (err) {
+        console.error("Failed to delete file:", file.filePath, err.message);
+      }
+    }
+    await File.findByIdAndDelete(file._id);
   }
 
-  // 2. Handle File and Image Updates
+  task.files = req.body.files;
+
   if (req.files) {
     if (req.files.files) {
       // Add new files
@@ -177,6 +200,13 @@ export const updateTask = asyncHandler(async (req, res, next) => {
       // Add new images
       const newImageIds = await handleFiles(req.files.images, "image");
       req.body.images = [...task.images, ...newImageIds];
+    }
+    // console.log(req.files.coverImage);
+    if (req.files.coverImage) {
+      // Add new images
+      const newImageIds = await handleFiles(req.files.coverImage, "coverImage");
+      // console.log(newImageIds[0]);
+      req.body.coverImage = newImageIds[0];
     }
   }
 
@@ -207,7 +237,7 @@ export const updateTaskOrder = asyncHandler(async (req, res, next) => {
   let nextTask = await Task.findById(req.body.next);
 
   if (prevTask && nextTask)
-    if (prevTask.stage !== nextTask)
+    if (!prevTask.stage.equals(nextTask.stage))
       return next(new ErrorResponse(`Invalid request`, 403));
 
   if (!prevTask && !nextTask) {

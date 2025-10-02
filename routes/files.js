@@ -2,7 +2,14 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { uploadFile, getFile, deleteFile } from "../controllers/files.js";
+import {
+  uploadFile,
+  getFile,
+  deleteFile,
+  getFiles,
+} from "../controllers/files.js";
+import { protect } from "../middleware/auth.js";
+import { get } from "http";
 
 const router = express.Router();
 const uploadDirectory = "public/uploads/";
@@ -26,11 +33,12 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB file size limit
 });
-
+router.use(protect);
 // File upload endpoint
 router.post("/upload", upload.single("file"), uploadFile);
 
 // Get and delete file endpoints
 router.route("/:id").get(getFile).delete(deleteFile);
+router.get("/", getFiles);
 
 export default router;

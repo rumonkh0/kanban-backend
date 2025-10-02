@@ -29,6 +29,7 @@ const taskSchema = new mongoose.Schema(
 
     files: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
     images: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
+    coverImage: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
 
     order: { type: String, default: "a" },
 

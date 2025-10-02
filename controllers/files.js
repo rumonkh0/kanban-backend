@@ -16,7 +16,7 @@ export const uploadFile = asyncHandler(async (req, res, next) => {
   const user = req.user._id; // Assuming user is authenticated
 
   // Check if linkedTo and linkedModel are provided
-  if (!linkedTo || !linkedModel) {
+  if (!linkedTo) {
     // Delete the file from the disk if the link data is missing
     fs.unlinkSync(req.file.path);
     return next(
@@ -26,7 +26,7 @@ export const uploadFile = asyncHandler(async (req, res, next) => {
 
   // Create a new file document
   const file = await File.create({
-    uploadedBy: user,
+    // uploadedBy: user,
     filePath: req.file.path,
     mimeType: req.file.mimetype,
     fileSize: req.file.size,
@@ -54,6 +54,19 @@ export const getFile = asyncHandler(async (req, res, next) => {
 
   // Serve the file to the client
   res.sendFile(path.resolve(file.filePath));
+});
+
+// @desc      Get a files by Model
+// @route     GET /api/v1/files?id=ladfjasdfjasdr2er
+// @access    Private
+export const getFiles = asyncHandler(async (req, res, next) => {
+  const files = await File.find({ linkedTo: req.query.id });
+
+  if (!files) {
+    return next(new ErrorResponse("File not found.", 404));
+  }
+
+  res.status(200).json({ success: true, data: files });
 });
 
 // @desc      Delete a file

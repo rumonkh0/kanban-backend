@@ -52,6 +52,7 @@ const upload = multer({
 const uploadFields = upload.fields([
   { name: "files", maxCount: 10 },
   { name: "images", maxCount: 10 },
+  { name: "coverImage", maxCount: 1 },
 ]);
 
 router.route("/").post(uploadFields, createTask).get(getTasks);

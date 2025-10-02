@@ -8,6 +8,7 @@ import Admin from "../models/Admin.js";
 import File from "../models/File.js";
 import fs from "fs";
 import path from "path";
+import Task from "../models/Task.js";
 
 // @desc      Create a freelancer
 // @route     POST /api/v1/freelancers
@@ -84,10 +85,20 @@ export const getFreelancers = asyncHandler(async (req, res, next) => {
     // .populate("addedBy")
     .populate("profilePicture");
 
+  // Map freelancers with task count
+  const freelancersWithCount = await Promise.all(
+    freelancers.map(async (freelancer) => {
+      const count = await Task.countDocuments({ members: freelancer._id,  });
+      return {
+        ...freelancer.toObject(),
+        taskCount: count,
+      };
+    })
+  );
   res.status(200).json({
     success: true,
     count: freelancers.length,
-    data: freelancers,
+    data: freelancersWithCount,
   });
 });
 
