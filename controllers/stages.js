@@ -2,6 +2,7 @@ import asyncHandler from "../middleware/async.js";
 import ErrorResponse from "../utils/errorResponse.js";
 import Stage from "../models/Stage.js";
 import { generateKeyBetween } from "fractional-indexing";
+import Task from "../models/Task.js";
 
 // @desc      Create a stage with an auto-incrementing order
 // @route     POST /api/v1/stages
@@ -104,7 +105,7 @@ export const updateStageOrder = asyncHandler(async (req, res, next) => {
 
   if (!nextStage) prevStage = await Stage.findOne({}).sort({ order: -1 });
   if (!prevStage) nextStage = await Stage.findOne({}).sort({ order: 1 });
-  
+
   try {
     stage.order = generateKeyBetween(prevStage?.order, nextStage?.order);
   } catch (error) {
@@ -132,6 +133,10 @@ export const deleteStage = asyncHandler(async (req, res, next) => {
       new ErrorResponse(`Stage not found with id of ${req.params.id}`, 404)
     );
   }
+
+  const tasks = await Task.countDocuments({ stage: req.params.id });
+  if (tasks > 0)
+    return next(new ErrorResponse("This Stage has tasks. can't delete.", 403));
 
   await stage.deleteOne();
 
