@@ -27,6 +27,7 @@ export const createProjectActivity = asyncHandler(async (req, res, next) => {
 export const getAllActivities = asyncHandler(async (req, res, next) => {
   const filters = {};
   if (req.query.project) filters.project = req.query.project;
+  if (req.params.projectId) filters.project = req.params.projectId;
   const activities = await ProjectActivity.find(filters)
     // .populate("project", "name description")
     .sort({ date: -1 });

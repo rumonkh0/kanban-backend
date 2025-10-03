@@ -15,6 +15,7 @@ import teamPayments from "./teamPayments.js";
 import projectMembers from "./projectMembers.js";
 import stages from "./stages.js";
 import tasks from "./tasks.js";
+import projectActivity from "./projectActivity.js";
 
 const router = express.Router();
 
@@ -25,6 +26,7 @@ router.use("/:projectId/team-payments", teamPayments);
 router.use("/:projectId/projectmembers", projectMembers);
 router.use("/:projectId/stages", stages);
 router.use("/:projectId/tasks", tasks);
+router.use("/:projectId/projectactivity", projectActivity);
 
 const uploadDirectory = "public/uploads/project/";
 
