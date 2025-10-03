@@ -4,10 +4,7 @@ const companySettingSchema = new mongoose.Schema(
   {
     companyName: { type: String, required: true, trim: true },
     companyEmail: { type: String, required: true, lowercase: true, trim: true },
-    companyPhone: {
-      countryCode: { type: String, trim: true },
-      number: { type: String, trim: true },
-    },
+    companyPhone: { type: String, trim: true },
     companyWebsite: { type: String, trim: true },
   },
   { timestamps: true }

@@ -8,10 +8,7 @@ const adminSchema = new mongoose.Schema(
     googleCalendar: { type: Boolean, default: true },
 
     country: { type: String, default: "USA", trim: true },
-    mobile: {
-      countryCode: { type: String, trim: true },
-      number: { type: String, trim: true },
-    },
+    mobile: { type: String, trim: true },
 
     language: { type: String, default: "English", trim: true },
     gender: {
@@ -30,10 +27,7 @@ const adminSchema = new mongoose.Schema(
     address: { type: String, trim: true },
 
     emergencyEmail: { type: String, trim: true },
-    emergencyPhone: {
-      countryCode: { type: String, trim: true },
-      number: { type: String, trim: true },
-    },
+    emergencyPhone: { type: String, trim: true },
     profilePicture: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
     // role: "admin",
   },
