@@ -124,15 +124,30 @@ export const getClientDetails = asyncHandler(async (req, res, next) => {
     },
   ]);
 
+  console.log(projectStats);
+
   // Extract the aggregation result (default to zero if no projects found)
   const stats = projectStats[0] || {
-    totalProjects: 0,
     totalEarnings: 0,
     totalDue: 0,
+    totalProjects: 0,
     statusCounts: [
       { key: "Completed", value: 0 },
       { key: "Active", value: 0 },
       { key: "On Hold", value: 0 },
+    ],
+    paymentStatus: [
+      { key: "Total Paid", value: 0 },
+      { key: "Total Due", value: 0 },
+    ],
+  };
+
+  const paymentStats = projectStats[1] || {
+    totalEarnings: 0,
+    totalDue: 0,
+    paymentStatus: [
+      { key: "Total Paid", value: 0 },
+      { key: "Total Due", value: 0 },
     ],
   };
 
