@@ -93,7 +93,10 @@ export const createPayment = asyncHandler(async (req, res, next) => {
 // @route     GET /api/v1/clients/:clientId/payments
 // @access    Private/Admin
 export const getPayments = asyncHandler(async (req, res, next) => {
-  const filter = { project: req.query.project };
+  const filter = {};
+  if (req.query.project) {
+    filter.project = req.query.project;
+  }
   if (req.params.projectId) {
     filter.project = req.params.projectId;
   }

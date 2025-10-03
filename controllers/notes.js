@@ -68,10 +68,11 @@ export const getNotes = asyncHandler(async (req, res, next) => {
 // @route     GET /api/v1/notes/:id
 // @access    Private
 export const getNote = asyncHandler(async (req, res, next) => {
-  const note = await Note.findById(req.params.id).populate({
-    path: "project",
-    select: "name",
-  });
+  const note = await Note.findById(req.params.id);
+  // .populate({
+  //   path: "project",
+  //   select: "name",
+  // });
   // .populate({ path: "createdBy", select: "email" });
 
   if (!note) {
@@ -82,9 +83,9 @@ export const getNote = asyncHandler(async (req, res, next) => {
 
   // Handle access control for private notes
   //   if (!note.isPublic && note.createdBy.toString() !== req.user._id.toString()) {
-  if (!note.isPublic) {
+  if (!note.isPublic && req.user.role !== "Admin") {
     // Note is private and not created by the current user
-    if (req.body.password) {
+    if (req.body?.password) {
       const isMatch = await note.matchPassword(password);
       if (!isMatch) {
         return next(new ErrorResponse("Incorrect password.", 401));
@@ -106,6 +107,7 @@ export const getNote = asyncHandler(async (req, res, next) => {
 // @route     PUT /api/v1/notes/:id
 // @access    Private
 export const updateNote = asyncHandler(async (req, res, next) => {
+  console.log(req.body);
   let note = await Note.findById(req.params.id);
 
   if (!note) {
@@ -115,15 +117,17 @@ export const updateNote = asyncHandler(async (req, res, next) => {
   }
 
   // Check ownership
-//   if (note.createdBy.toString() !== req.user._id.toString()) {
-//     return next(
-//       new ErrorResponse("You are not authorized to update this note.", 403)
-//     );
-//   }
+  //   if (note.createdBy.toString() !== req.user._id.toString()) {
+  //     return next(
+  //       new ErrorResponse("You are not authorized to update this note.", 403)
+  //     );
+  //   }
+
 
   note = await Note.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
+    context: "query",
   });
 
   res.status(200).json({
@@ -145,11 +149,11 @@ export const deleteNote = asyncHandler(async (req, res, next) => {
   }
 
   // Check ownership
-//   if (note.createdBy.toString() !== req.user._id.toString()) {
-//     return next(
-//       new ErrorResponse("You are not authorized to delete this note.", 403)
-//     );
-//   }
+  //   if (note.createdBy.toString() !== req.user._id.toString()) {
+  //     return next(
+  //       new ErrorResponse("You are not authorized to delete this note.", 403)
+  //     );
+  //   }
 
   await note.deleteOne();
 

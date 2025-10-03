@@ -36,6 +36,7 @@ import projectMembers from "./routes/projectMembers.js";
 import comments from "./routes/comments.js";
 import dashboard from "./routes/dashboard.js";
 import files from "./routes/files.js";
+import projectActivity from "./routes/projectActivity.js";
 
 const app = express();
 
@@ -78,7 +79,7 @@ app.use(
         callback(new Error("Not allowed by CORS"));
       }
     },
-    credentials: true, 
+    credentials: true,
   })
 );
 
@@ -113,6 +114,7 @@ app.use("/api/v1/notes", notes);
 app.use("/api/v1/projectmembers", projectMembers);
 app.use("/api/v1/comments", comments);
 app.use("/api/v1/files", files);
+app.use("/api/v1/projectActivity", projectActivity);
 
 app.get("/api/v1/", (req, res) => {
   res.send("Hello From Creative CRM backend!");

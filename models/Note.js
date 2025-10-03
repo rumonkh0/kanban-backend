@@ -16,7 +16,13 @@ const noteSchema = new mongoose.Schema(
       type: String,
       // Only required if the note is not public
       required: function () {
-        return !this.isPublic;
+        if (this.isPublic) {
+          return false;
+        }
+        if (!this.isNew && !this.password) {
+          return false;
+        }
+        return true;
       },
       select: false,
     },
@@ -54,6 +60,10 @@ noteSchema.pre("findOneAndUpdate", async function (next) {
   if (update.password) {
     const salt = await bcrypt.genSalt(10);
     update.password = await bcrypt.hash(update.password, salt);
+  }
+  if (update.isPublic === true) {
+    update.$unset = { ...update.$unset, password: 1 };
+    delete update.password;
   }
   next();
 });

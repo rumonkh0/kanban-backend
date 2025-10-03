@@ -12,7 +12,7 @@ import { protect } from "../middleware/auth.js";
 import { get } from "http";
 
 const router = express.Router();
-const uploadDirectory = "public/uploads/";
+const uploadDirectory = "public/uploads/files";
 
 // Ensure the directory exists
 if (!fs.existsSync(uploadDirectory)) {

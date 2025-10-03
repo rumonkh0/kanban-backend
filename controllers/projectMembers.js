@@ -63,11 +63,17 @@ export const getProjectMembers = asyncHandler(async (req, res, next) => {
     .populate("project", "projectName")
     .populate({
       path: "freelancer",
-      select: "name profilePicture",
-      populate: {
-        path: "profilePicture",
-        select: "filePath",
-      },
+      select: "name user profilePicture",
+      populate: [
+        {
+          path: "profilePicture",
+          select: "filePath",
+        },
+        {
+          path: "user",
+          select: "email",
+        },
+      ],
     });
 
   res.status(200).json({

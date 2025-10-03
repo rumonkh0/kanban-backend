@@ -79,7 +79,10 @@ export const createFreelancer = asyncHandler(async (req, res, next) => {
 // @access    Private/Admin
 export const getFreelancers = asyncHandler(async (req, res, next) => {
   const freelancers = await Freelancer.find()
-    .populate({ path: "user", select: "email role" })
+    .populate({
+      path: "user",
+      select: "email role"
+    })
     // .populate("designation")
     .populate("department")
     // .populate("addedBy")
@@ -88,7 +91,7 @@ export const getFreelancers = asyncHandler(async (req, res, next) => {
   // Map freelancers with task count
   const freelancersWithCount = await Promise.all(
     freelancers.map(async (freelancer) => {
-      const count = await Task.countDocuments({ members: freelancer._id,  });
+      const count = await Task.countDocuments({ members: freelancer._id });
       return {
         ...freelancer.toObject(),
         taskCount: count,

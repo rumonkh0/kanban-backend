@@ -77,7 +77,10 @@ export const createTeamPayment = asyncHandler(async (req, res, next) => {
 // @route     GET /api/v1/freelancers/:freelancerId/teampayments
 // @access    Private/Admin
 export const getTeamPayments = asyncHandler(async (req, res, next) => {
-  const filter = { project: req.query.project };
+  const filter = {};
+  if (req.query.project) {
+    filter.project = req.query.project;
+  }
   if (req.params.projectId) {
     filter.project = req.params.projectId;
   }
