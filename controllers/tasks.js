@@ -16,7 +16,7 @@ export const createTask = asyncHandler(async (req, res, next) => {
   const { projectId, stageId } = req.params;
   if (projectId) req.body.project = projectId;
   if (stageId) req.body.stage = stageId;
-  const { members, ...taskData } = req.body;
+  const { members, order, ...taskData } = req.body;
 
   // 1. Validate existence of Project, Stage, and Members
   const existingProject = await Project.findById(req.body.project);
@@ -42,7 +42,15 @@ export const createTask = asyncHandler(async (req, res, next) => {
   const lastTask = await Task.findOne({ stage: req.body.stage })
     .sort({ order: -1 })
     .select("order");
-  const newOrder = lastTask ? lastTask.order + "a" : "a";
+  let newOrder;
+  try {
+    // console.log(lastTask?.order);
+    newOrder = generateKeyBetween(lastTask?.order, undefined);
+    // await task.save();
+  } catch (error) {
+    console.log(error);
+    return next(new ErrorResponse(`Task can't update`, 304));
+  }
 
   // 3. Handle File Uploads (assuming multer passes files in req.files)
   let fileIds = [];
@@ -54,7 +62,7 @@ export const createTask = asyncHandler(async (req, res, next) => {
   const task = await Task.create({
     ...taskData,
     members,
-    // order: newOrder,
+    order: newOrder,
     files: fileIds,
     images: imageIds,
   });
@@ -70,7 +78,7 @@ export const createTask = asyncHandler(async (req, res, next) => {
 // @route     GET /api/v1/projects/:projectId/stages/:stageId/tasks
 // @access    Private
 export const getTasks = asyncHandler(async (req, res, next) => {
-  const filter = {};
+  const filter = { ...req.query };
   if (req.params.projectId) {
     filter.project = req.params.projectId;
   }
