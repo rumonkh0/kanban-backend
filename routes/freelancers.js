@@ -55,11 +55,14 @@ router.use("/:projectId/team-payments", teamPayments);
 
 router.use(protect);
 // router.use(authorize("Admin"));
-router.route("/").get(getFreelancers).post(uploadFields, createFreelancer);
+router
+  .route("/")
+  .get(getFreelancers)
+  .post(uploadFields, authorize("Admin"), createFreelancer);
 
 router
   .route("/:id")
   .get(getFreelancer)
-  .put(uploadFields, updateFreelancer)
-  .delete(deleteFreelancer);
+  .put(uploadFields, authorize("Admin","Freelancer"), updateFreelancer)
+  .delete(authorize("Admin"), deleteFreelancer);
 export default router;

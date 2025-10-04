@@ -236,28 +236,42 @@ export const updateTaskOrder = asyncHandler(async (req, res, next) => {
   let prevTask = await Task.findById(req.body.prev);
   let nextTask = await Task.findById(req.body.next);
 
-  if (prevTask && nextTask)
-    if (!prevTask.stage.equals(nextTask.stage))
-      return next(new ErrorResponse(`Invalid request`, 403));
+  // if (prevTask && nextTask)
+  //   if (!prevTask.stage.equals(nextTask.stage))
+  //     return next(new ErrorResponse(`Invalid request`, 403));
 
   if (!prevTask && !nextTask) {
     prevTask = await Task.findOne({
-      project: task.project,
       stage: req.body.newStage,
     }).sort({
       order: -1,
     });
   } else {
-    if (!nextTask)
-      prevTask = await Task.findOne({
-        project: task.project,
-        stage: req.body.newStage,
-      }).sort({ order: -1 });
-    if (!prevTask)
+    if (prevTask)
       nextTask = await Task.findOne({
-        project: task.project,
-        stage: req.body.newStage,
-      }).sort({ order: 1 });
+        stage: prevTask.stage,
+        order: { $gt: prevTask.order },
+      })
+        .sort({ order: 1 })
+        .limit(1);
+    else
+      prevTask = await Task.findOne({
+        stage: nextTask.stage,
+        order: { $lt: nextTask.order },
+      })
+        .sort({ order: -1 })
+        .limit(1);
+
+    // if (!nextTask)
+    //   prevTask = await Task.findOne({
+    //     project: task.project,
+    //     stage: req.body.newStage,
+    //   }).sort({ order: -1 });
+    // if (!prevTask)
+    //   nextTask = await Task.findOne({
+    //     project: task.project,
+    //     stage: req.body.newStage,
+    //   }).sort({ order: 1 });
   }
   try {
     task.order = generateKeyBetween(prevTask?.order, nextTask?.order);

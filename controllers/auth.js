@@ -17,7 +17,13 @@ export const login = asyncHandler(async (req, res, next) => {
   // Check for user
   const user = await User.findOne({ email })
     .select("+password")
-    .populate("profile");
+    .populate({
+      path: "profile",
+      populate: {
+        path: "profilePicture",
+        select: "filePath",
+      },
+    });
 
   if (!user) {
     return next(new ErrorResponse("Invalid credentials", 401));
@@ -29,7 +35,7 @@ export const login = asyncHandler(async (req, res, next) => {
   if (!isMatch) {
     return next(new ErrorResponse("Invalid credentials", 401));
   }
-  
+
   user.lastLogin = Date.now();
   await user.save();
 

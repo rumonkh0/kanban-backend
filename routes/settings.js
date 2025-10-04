@@ -56,6 +56,7 @@ const upload = multer({
   },
 });
 
+
 router
   .route("/admin")
   .get(getAdminSetting)

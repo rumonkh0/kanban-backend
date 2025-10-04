@@ -248,7 +248,9 @@ export const createClient = asyncHandler(async (req, res, next) => {
 // @route     PUT /api/v1/clients/:id
 // @access    Private/Admin
 export const updateClient = asyncHandler(async (req, res, next) => {
-  let client = await Client.findById(req.params.id);
+  let id = req.params.id;
+  if (req.user.role === "Client") id = req.user.profile._id;
+  let client = await Client.findById(id);
   console.log(req.body);
 
   if (!client) {

@@ -12,6 +12,7 @@ import {
 import fs from "fs";
 import payments from "./payments.js";
 
+import { authorize, protect } from "../middleware/auth.js";
 const uploadDirectory = "public/uploads/client/";
 
 // Ensure that the upload directory exists; if not, create it
@@ -57,11 +58,15 @@ const router = express.Router();
 
 router.use("/:projectId/payments", payments);
 
-router.route("/").post(uploadFields, createClient).get(getClients);
+router.use(protect);
+router
+  .route("/")
+  .post(uploadFields, authorize("Admin"), createClient)
+  .get(authorize("Admin"), getClients);
 router.get("/:id/details", getClientDetails);
 router
   .route("/:id")
   .get(getClient)
-  .put(uploadFields, updateClient)
-  .delete(deleteClient);
+  .put(uploadFields, authorize("Admin", "Client"), updateClient)
+  .delete(authorize("Admin"), deleteClient);
 export default router;

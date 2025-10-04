@@ -11,6 +11,7 @@ import {
   updateTaskOrder,
 } from "../controllers/tasks.js";
 import comments from "./comments.js";
+import { authorize, protect } from "../middleware/auth.js";
 
 const router = express.Router({ mergeParams: true });
 router.use("/:taskId/comments", comments);
@@ -55,6 +56,7 @@ const uploadFields = upload.fields([
   { name: "coverImage", maxCount: 1 },
 ]);
 
+router.use(protect);
 router.route("/").post(uploadFields, createTask).get(getTasks);
 router.put("/:id/reorder", updateTaskOrder);
 router

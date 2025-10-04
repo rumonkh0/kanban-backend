@@ -5,9 +5,11 @@ import {
   markAllAsRead,
   deleteNotification,
 } from "../controllers/notificationController.js";
+import { authorize, protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
+router.use(protect);
 // Get all notifications
 router.route("/").get(getNotifications);
 

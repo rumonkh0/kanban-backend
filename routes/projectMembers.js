@@ -8,7 +8,10 @@ import {
   deleteProjectMember,
 } from "../controllers/projectMembers.js";
 
+import { authorize, protect } from "../middleware/auth.js";
 const router = express.Router({ mergeParams: true });
+
+router.use(protect);
 
 router.route("/").post(createProjectMember).get(getProjectMembers);
 

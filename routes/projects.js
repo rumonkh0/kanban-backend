@@ -16,6 +16,7 @@ import projectMembers from "./projectMembers.js";
 import stages from "./stages.js";
 import tasks from "./tasks.js";
 import projectActivity from "./projectActivity.js";
+import { authorize, protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -66,12 +67,17 @@ const upload = multer({
 
 const uploadFields = upload.fields([{ name: "relatedFiles", maxCount: 10 }]);
 
-router.route("/").post(uploadFields, createProject).get(getProjects);
+router.use(protect);
+
+router
+  .route("/")
+  .post(uploadFields, authorize("Admin"), createProject)
+  .get(getProjects);
 
 router
   .route("/:id")
   .get(getProject)
-  .put(uploadFields, updateProject)
-  .delete(deleteProject);
+  .put(uploadFields, authorize("Admin"), updateProject)
+  .delete(authorize("Admin"), deleteProject);
 
 export default router;

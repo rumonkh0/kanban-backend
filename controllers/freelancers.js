@@ -81,7 +81,7 @@ export const getFreelancers = asyncHandler(async (req, res, next) => {
   const freelancers = await Freelancer.find()
     .populate({
       path: "user",
-      select: "email role"
+      select: "email role",
     })
     // .populate("designation")
     .populate("department")
@@ -130,7 +130,9 @@ export const getFreelancer = asyncHandler(async (req, res, next) => {
 // @access    Private/Admin
 export const updateFreelancer = asyncHandler(async (req, res, next) => {
   const { email, password, designation, department, ...updateData } = req.body;
-  let freelancer = await Freelancer.findById(req.params.id);
+  let id = req.params.id;
+  if (req.user.role === "Freelancer") id = req.user.profile._id;
+  let freelancer = await Freelancer.findById(id);
 
   if (!freelancer) {
     return next(
@@ -159,7 +161,7 @@ export const updateFreelancer = asyncHandler(async (req, res, next) => {
       if (freelancer.profilePicture) {
         const oldFile = await File.findById(freelancer.profilePicture);
         if (oldFile) {
-          const fullPath = path.join("public", file.path);
+          const fullPath = path.join("public", oldFile.filePath);
           fs.unlink(oldFile.filePath, (err) => {
             if (err)
               console.error("Error deleting old profile picture file:", err);

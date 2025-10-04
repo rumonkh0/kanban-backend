@@ -8,8 +8,11 @@ import {
   updateStageOrder,
 } from "../controllers/stages.js";
 import tasksRouter from "./tasks.js";
+import { authorize, protect } from "../middleware/auth.js";
 
 const router = express.Router({ mergeParams: true });
+
+router.use(protect);
 
 router.use("/:stageId/tasks", tasksRouter);
 

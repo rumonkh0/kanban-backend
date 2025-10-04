@@ -9,6 +9,7 @@ import {
   updateTeamPayment,
   deleteTeamPayment,
 } from "../controllers/teamPayments.js";
+import { authorize, protect } from "../middleware/auth.js";
 
 const uploadDirectory = "public/uploads/teamPayment/";
 
@@ -37,6 +38,8 @@ const upload = multer({
 });
 const uploadFields = upload.fields([{ name: "relatedFile", maxCount: 1 }]);
 const router = express.Router({ mergeParams: true });
+
+router.use(protect);
 
 router.route("/").post(uploadFields, createTeamPayment).get(getTeamPayments);
 

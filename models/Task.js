@@ -52,6 +52,6 @@ taskSchema.virtual("comments", {
 taskSchema.set("toObject", { virtuals: true });
 taskSchema.set("toJSON", { virtuals: true });
 
-taskSchema.index({ project: 1, stage: 1, order: 1 }, { unique: true });
+taskSchema.index({ stage: 1, order: 1 }, { unique: true });
 
 export default mongoose.model("Task", taskSchema);

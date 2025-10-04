@@ -11,6 +11,7 @@ import {
 } from "../controllers/payments.js";
 
 const uploadDirectory = "public/uploads/payment/";
+import { authorize, protect } from "../middleware/auth.js";
 
 // Ensure that the upload directory exists; if not, create it
 if (!fs.existsSync(uploadDirectory)) {
@@ -40,6 +41,7 @@ const uploadFields = upload.fields([{ name: "relatedFile", maxCount: 1 }]);
 
 const router = express.Router({ mergeParams: true });
 
+router.use(protect, authorize("Admin"));
 router.route("/").post(uploadFields, createPayment).get(getPayments);
 
 router
