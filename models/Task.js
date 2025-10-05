@@ -20,6 +20,7 @@ const taskSchema = new mongoose.Schema(
 
     startDate: { type: Date, default: Date.now },
     dueDate: { type: Date },
+    completionDate: { type: Date, default: null },
 
     priority: {
       type: String,
@@ -32,7 +33,6 @@ const taskSchema = new mongoose.Schema(
     coverImage: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
 
     order: { type: String, required: true },
-    completionDate: { type: Date, default: null },
     status: {
       type: String,
       enum: ["Not Started", "In Progress", "Completed", "Blocked"],

@@ -6,6 +6,7 @@ import Task from "../models/Task.js";
 import Freelancer from "../models/Freelancer.js";
 import TeamPayment from "../models/TeamPayment.js";
 import Payment from "../models/Payment.js";
+import Appreciation from "../models/Appreciation.js";
 
 // @desc      Get admin dashboard
 // @route     GET /api/v1/admin/dashboard/private
@@ -434,7 +435,7 @@ const countTaskDeadlines = (projects, dateKey, unit = "day") => {
 };
 
 const getDeadlineTaskChart = async () => {
-  console.log("hi");
+  // console.log("hi");
   // Fetch all projects whose dueDate is within the last 12 months + current month
   const twelveMonthsAgo = moment()
     .subtract(12, "months")
@@ -795,11 +796,11 @@ const getProjectTaskActivity = asyncHandler(
         overdue = 0;
 
       projects.forEach((p) => {
-        const start = moment(p.startDate);
-        const dueDate = moment(p.dueDate);
+        const start = p.startDate ? moment(p.startDate) : null;
+        const dueDate = p.dueDate ? moment(p.dueDate) : null;
         const completion = p.completionDate ? moment(p.completionDate) : null;
 
-        // 1. Completed: completion happened within the range [startRange, endRange]
+        // --- Completed ---
         if (
           completion &&
           completion.isBetween(startRange, endRange, null, "[]")
@@ -807,21 +808,25 @@ const getProjectTaskActivity = asyncHandler(
           completed++;
         }
 
-        // 2. Due: due date happened within the range [startRange, endRange]
-        if (dueDate.isBetween(startRange, endRange, null, "[]")) {
+        // --- Due ---
+        if (dueDate && dueDate.isBetween(startRange, endRange, null, "[]")) {
           due++;
         }
 
-        const projectStillRunningAtStartOfRange =
-          !completion || completion.isAfter(startRange);
+        // --- Active ---
+        // A task is active if:
+        // It started on/before this day, and not yet completed before this day
         if (
+          start &&
           start.isSameOrBefore(endRange) &&
-          projectStillRunningAtStartOfRange
+          (!completion || completion.isAfter(endRange))
         ) {
           active++;
         }
 
+        // --- Overdue ---
         if (
+          dueDate &&
           dueDate.isSameOrBefore(endRange) &&
           (!completion || completion.isAfter(endRange))
         ) {
@@ -1066,11 +1071,14 @@ export const getFreelancerStatistics = asyncHandler(async (req, res) => {
   const averageTasksPerMember =
     totalMembers > 0 ? totalTasksAssigned / totalMembers : 0;
 
-  res.json({
-    totalMembers,
-    totalActiveMembers,
-    totalTasksAssigned,
-    averageTasksPerMember: Number(averageTasksPerMember.toFixed(2)), // round to 2 decimals
+  res.status(200).json({
+    sucess: true,
+    data: {
+      totalMembers,
+      totalActiveMembers,
+      totalTasksAssigned,
+      averageTasksPerMember: Number(averageTasksPerMember.toFixed(2)), // round to 2 decimals
+    },
   });
 });
 
@@ -1104,10 +1112,10 @@ export const getFreelancerStatusCounts = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     total,
-    statuses: [
-      { key: "active", value: active },
-      { key: "inactive", value: inactive },
-      { key: "onLeave", value: onLeave },
+    data: [
+      { Key: "active", value: active || 0 },
+      { Key: "inactive", value: inactive || 0 },
+      { Key: "onLeave", value: onLeave || 0 },
     ],
   });
 });
@@ -1115,7 +1123,8 @@ export const getFreelancerStatusCounts = asyncHandler(async (req, res) => {
 export const getmemberProject = asyncHandler(async (req, res, next) => {
   const stats = await getProjectTaskActivity(Project, req.params.memberId);
   res.status(200).json({
-    stats,
+    success: true,
+    data: stats,
   });
 });
 
@@ -1283,14 +1292,15 @@ export const getEarningsStatistics = asyncHandler(async (req, res, next) => {
     }
   );
 
-  res.status(200).json({ stat: { week, month, year } });
+  res.status(200).json({ success: true, data: { week, month, year } });
 });
 
 export const getFinancepayment = asyncHandler(async (req, res) => {
   const data = await aggregateProjectFinancialTotals();
 
   res.status(200).json({
-    data,
+    success: true,
+    data: data[0],
   });
 });
 

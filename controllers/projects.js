@@ -232,6 +232,8 @@ export const updateProject = asyncHandler(async (req, res, next) => {
     amountOwedToMembers,
     finalAmountEarned,
 
+    status,
+
     ...updateData
   } = req.body;
 
@@ -329,6 +331,10 @@ export const updateProject = asyncHandler(async (req, res, next) => {
   if (service) {
     updateData.service = service;
   }
+
+  if (status && status === "Complete" && project.status !== "Complete")
+    req.body.completionDate = Date.now();
+  else req.body.completionDate = null;
 
   // --- 4. Apply Updates and Trigger Hook ---
 

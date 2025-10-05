@@ -43,7 +43,6 @@ router
   //client
   // .get("/client", authorize("Admin"), adminClients)
   .get("/clientstat", authorize("Admin"), getClientStat)
-  .get("/clientpayment", authorize("Admin"), getClientPayment)
   .get("/clientproject", authorize("Admin"), getClientProject)
 
   //project
