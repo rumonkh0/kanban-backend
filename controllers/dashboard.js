@@ -191,7 +191,8 @@ export const getPrivateDashboard = async (req, res) => {
 
 // Overview
 export const getOverviewStat = asyncHandler(async (req, res, next) => {
-  const data = await earningsSummary();
+  const d = await earningsSummary();
+  const data = await getMonthlyRevenueAndEarnings();
   const totalActiveFreelancers = await Freelancer.countDocuments({
     status: "Active",
   });
@@ -199,7 +200,12 @@ export const getOverviewStat = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "dashboard found",
-    data: { ...data, totalActiveFreelancers },
+    data: {
+      toBePaid: d.toBePaid,
+      totalEarnings: data.thisMonth.earnings,
+      revenue: data.thisMonth.revenue,
+      totalActiveFreelancers,
+    },
   });
 });
 
@@ -1041,6 +1047,107 @@ const getLast7DaysTaskStatus = asyncHandler(async () => {
   return weekData;
 });
 
+const getMonthlyRevenueAndEarnings = asyncHandler(async (req, res) => {
+  const now = new Date();
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endOfLastMonth = new Date(startOfThisMonth);
+
+  // ---------- THIS MONTH ----------
+  const [thisMonthRevenue] = await Payment.aggregate([
+    {
+      $match: {
+        paymentDate: { $gte: startOfThisMonth, $lte: now },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$amountPaid" },
+      },
+    },
+  ]);
+
+  const [thisMonthExpenses] = await TeamPayment.aggregate([
+    {
+      $match: {
+        paymentDate: { $gte: startOfThisMonth, $lte: now },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$amountPaid" },
+      },
+    },
+  ]);
+
+  // ---------- PREVIOUS MONTH ----------
+  const [prevMonthRevenue] = await Payment.aggregate([
+    {
+      $match: {
+        paymentDate: { $gte: startOfLastMonth, $lt: endOfLastMonth },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$amountPaid" },
+      },
+    },
+  ]);
+
+  const [prevMonthExpenses] = await TeamPayment.aggregate([
+    {
+      $match: {
+        paymentDate: { $gte: startOfLastMonth, $lt: endOfLastMonth },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$amountPaid" },
+      },
+    },
+  ]);
+
+  // ---------- CALCULATE ----------
+  const thisMonthRevenueValue = thisMonthRevenue?.total || 0;
+  const thisMonthExpensesValue = thisMonthExpenses?.total || 0;
+
+  const prevMonthRevenueValue = prevMonthRevenue?.total || 0;
+  const prevMonthExpensesValue = prevMonthExpenses?.total || 0;
+
+  const thisMonthEarnings = thisMonthRevenueValue - thisMonthExpensesValue;
+  const prevMonthEarnings = prevMonthRevenueValue - prevMonthExpensesValue;
+
+  const calcGrowth = (current, prev) =>
+    prev === 0 ? (current > 0 ? 100 : 0) : ((current - prev) / prev) * 100;
+
+  const revenueGrowth = calcGrowth(
+    thisMonthRevenueValue,
+    prevMonthRevenueValue
+  );
+  const earningsGrowth = calcGrowth(thisMonthEarnings, prevMonthEarnings);
+
+  const data = {
+    thisMonth: {
+      revenue: thisMonthRevenueValue,
+      earnings: thisMonthRevenueValue - thisMonthExpensesValue,
+    },
+    previousMonth: {
+      revenue: prevMonthRevenueValue,
+      earnings: prevMonthRevenueValue - prevMonthExpensesValue,
+    },
+    growth: {
+      revenue: revenueGrowth.toFixed(2),
+      earnings: earningsGrowth.toFixed(2),
+    },
+  };
+
+  return data;
+});
+
 //  for HR section
 export const getFreelancerStatistics = asyncHandler(async (req, res) => {
   // 1️⃣ Total members & active members
@@ -1161,10 +1268,15 @@ const earningsSummary = asyncHandler(async () => {
 //For Finance
 export const getProjectEarningsSummary = asyncHandler(async (req, res) => {
   const agg = await earningsSummary();
+  const data = await getMonthlyRevenueAndEarnings();
 
   res.status(200).json({
     success: true,
-    data: agg,
+    data: {
+      toBePaid: agg.toBePaid,
+      totalEarnings: data.thisMonth.earnings,
+      revenue: data.thisMonth.revenue,
+    },
   });
 });
 

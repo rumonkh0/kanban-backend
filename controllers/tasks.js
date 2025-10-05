@@ -90,7 +90,7 @@ export const getTasks = asyncHandler(async (req, res, next) => {
 
   // console.log(req.params);
   const tasks = await Task.find(filters)
-    .populate("project", "projectName")
+    .populate("project", "projectName shortCode")
     // .populate("stage", "title")
     .populate({
       path: "members",
@@ -112,6 +112,7 @@ export const getTasks = asyncHandler(async (req, res, next) => {
       path: "coverImage",
       select: "originalName filePath",
     })
+    .populate({ path: "stage", select: "title" })
     .populate({
       path: "comments",
       options: { sort: { createdAt: 1 } },
@@ -150,7 +151,7 @@ export const getTask = asyncHandler(async (req, res, next) => {
         },
       },
     })
-    .populate("stage", "title")
+    .populate("stage", "title color")
     // .populate("members", "name profilePicture")
     .populate("files", "originalName filePath")
     .populate("images", "originalName filePath")
@@ -183,9 +184,9 @@ export const updateTask = asyncHandler(async (req, res, next) => {
 
   const existingFileIds = req.body.files || [];
 
-  const filesToRemove = task.files.filters(
-    (f) => !existingFileIds.includes(f._id.toString())
-  );
+  const filesToRemove = Array.isArray(task.files)
+    ? task.files.filter((f) => !existingFileIds.includes(f._id.toString()))
+    : [];
 
   for (const file of filesToRemove) {
     if (file.filePath) {
