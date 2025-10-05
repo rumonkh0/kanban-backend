@@ -74,9 +74,10 @@ const freelancerSchema = new mongoose.Schema(
 
     accountStatus: {
       type: String,
-      enum: ["Active", "Inactive", "Suspended"],
+      enum: ["Active", "Inactive", "On Leave"],
       default: "Active",
     },
+    onLeaveDate: { type: Date },
 
     profilePicture: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
   },

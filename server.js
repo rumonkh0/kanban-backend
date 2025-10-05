@@ -37,6 +37,7 @@ import comments from "./routes/comments.js";
 import dashboard from "./routes/dashboard.js";
 import files from "./routes/files.js";
 import projectActivity from "./routes/projectActivity.js";
+import notifications from "./routes/notifications.js";
 import settingsRoutes from "./routes/settings.js";
 
 const app = express();
@@ -117,6 +118,7 @@ app.use("/api/v1/comments", comments);
 app.use("/api/v1/files", files);
 app.use("/api/v1/projectactivity", projectActivity);
 app.use("/api/v1/settings", settingsRoutes);
+app.use("/api/v1/notifications", notifications);
 
 app.get("/api/v1/", (req, res) => {
   res.send("Hello From Creative CRM backend!");

@@ -78,16 +78,18 @@ export const createTask = asyncHandler(async (req, res, next) => {
 // @route     GET /api/v1/projects/:projectId/stages/:stageId/tasks
 // @access    Private
 export const getTasks = asyncHandler(async (req, res, next) => {
-  const filter = { ...req.query };
+  const filters = { ...req.query };
   if (req.params.projectId) {
-    filter.project = req.params.projectId;
+    filters.project = req.params.projectId;
   }
+  if (req.user.role === "Freelancer") filters.members = req.user.profile?._id;
   if (req.params.stageId) {
-    filter.stage = req.params.stageId;
+    filters.stage = req.params.stageId;
   }
+  console.log(filters);
 
   // console.log(req.params);
-  const tasks = await Task.find(filter)
+  const tasks = await Task.find(filters)
     .populate("project", "projectName")
     // .populate("stage", "title")
     .populate({
@@ -181,7 +183,7 @@ export const updateTask = asyncHandler(async (req, res, next) => {
 
   const existingFileIds = req.body.files || [];
 
-  const filesToRemove = task.files.filter(
+  const filesToRemove = task.files.filters(
     (f) => !existingFileIds.includes(f._id.toString())
   );
 

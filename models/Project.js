@@ -26,7 +26,7 @@ const projectSchema = new mongoose.Schema(
       enum: ["Not Started", "In Progress", "On Hold", "Completed", "Cancelled"],
       default: "In Progress",
     },
-
+    completionDate: { type: Date, default: null },
     progress: { type: Number, default: 0, min: 0, max: 100 },
     calculateProgress: { type: Boolean, default: false },
 
@@ -69,9 +69,6 @@ const projectSchema = new mongoose.Schema(
 
     // Misc
     comments: { type: String },
-    archive: {type: Boolean, default: false},
-    pin: {type: Boolean, default: false},
-
   },
   { timestamps: true }
 );
@@ -149,7 +146,6 @@ projectSchema.pre("save", function (next) {
 
   next();
 });
-
 
 // Middleware to delete all associated ProjectMember documents when a Project is deleted
 projectSchema.pre(

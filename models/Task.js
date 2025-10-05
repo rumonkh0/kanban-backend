@@ -18,7 +18,7 @@ const taskSchema = new mongoose.Schema(
 
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: "Freelancer" }],
 
-    createdDate: { type: Date, default: Date.now },
+    startDate: { type: Date, default: Date.now },
     dueDate: { type: Date },
 
     priority: {
@@ -31,8 +31,8 @@ const taskSchema = new mongoose.Schema(
     images: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
     coverImage: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
 
-    order: { type: String, default: "a" },
-
+    order: { type: String, required: true },
+    completionDate: { type: Date, default: null },
     status: {
       type: String,
       enum: ["Not Started", "In Progress", "Completed", "Blocked"],
