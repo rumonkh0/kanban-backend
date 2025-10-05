@@ -271,7 +271,7 @@ export const getClientPayment = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "dashboard found",
-    data: paymentSummary,
+    data: paymentSummary[0],
   });
 });
 
