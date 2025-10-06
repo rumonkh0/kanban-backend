@@ -1,16 +1,18 @@
 import express from "express";
 import {
-  adminClients,
-  adminOverview,
-  adminProject,
-  adminTask,
   getClientPayment,
   getClientProject,
+  getClientProjectPayment,
+  getClientProjectStats,
+  getClientProjectStatusPie,
   getClientStat,
   getEarningsStatistics,
   getFinancepayment,
+  getFreelancerEarningsStats,
   getFreelancerStatistics,
+  getFreelancerStats,
   getFreelancerStatusCounts,
+  getFreelancerTaskSummary,
   getmemberProject,
   getOverviewDeadline,
   getOverviewPayment,
@@ -24,7 +26,6 @@ import {
   getTaskActivity,
   getTaskDeadline,
   getTaskStat,
-  hr,
 } from "../controllers/dashboard.js";
 import { authorize, protect } from "../middleware/auth.js";
 
@@ -66,6 +67,19 @@ router
   //Finance
   .get("/financestat", authorize("Admin"), getProjectEarningsSummary)
   .get("/financebytime", authorize("Admin"), getEarningsStatistics)
-  .get("/financepayment", authorize("Admin"), getFinancepayment);
+  .get("/financepayment", authorize("Admin"), getFinancepayment)
+
+  //Client
+  .get("/client/:clientId/clientstat", getClientProjectStats)
+  .get("/client/:clientId/clientproject", getClientProjectStatusPie)
+  .get("/client/:clientId/clientpayment", getClientProjectPayment)
+
+  //Freelancer
+  .get("/freelancer/:freelancerId/freelancerstat", getFreelancerStats)
+  .get("/freelancer/:freelancerId/freelancertask", getFreelancerTaskSummary)
+  .get(
+    "/freelancer/:freelancerId/freelancerearning",
+    getFreelancerEarningsStats
+  );
 
 export default router;

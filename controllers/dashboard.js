@@ -7,6 +7,8 @@ import Freelancer from "../models/Freelancer.js";
 import TeamPayment from "../models/TeamPayment.js";
 import Payment from "../models/Payment.js";
 import Appreciation from "../models/Appreciation.js";
+import mongoose from "mongoose";
+import ProjectMember from "../models/ProjectMember.js";
 
 // @desc      Get admin dashboard
 // @route     GET /api/v1/admin/dashboard/private
@@ -1602,6 +1604,433 @@ export const getFinancepayment = asyncHandler(async (req, res) => {
     data: data[0],
   });
 });
+
+//for Client
+
+export const getClientProjectStats = asyncHandler(async (req, res) => {
+  const { clientId } = req.params;
+
+  if (!clientId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Client ID is required" });
+  }
+
+  const today = moment().endOf("day").toDate();
+
+  const stats = await Project.aggregate([
+    { $match: { client: clientId } },
+
+    {
+      $group: {
+        _id: null,
+        totalProjects: { $sum: 1 },
+        activeProjects: {
+          $sum: {
+            $cond: [{ $eq: ["$status", "Active"] }, 1, 0],
+          },
+        },
+        completedProjects: {
+          $sum: {
+            $cond: [{ $eq: ["$status", "Completed"] }, 1, 0],
+          },
+        },
+        dueProjects: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $lte: ["$dueDate", today] },
+                  { $ne: ["$status", "Completed"] },
+                ],
+              },
+              1,
+              0,
+            ],
+          },
+        },
+        totalPayment: { $sum: "$finalAmountForClient" },
+        paid: { $sum: "$amountPaidByClient" },
+        owed: { $sum: "$amountOwedByClient" },
+      },
+    },
+    { $project: { _id: 0 } },
+  ]);
+
+  const result = stats[0] || {
+    totalProjects: 0,
+    activeProjects: 0,
+    completedProjects: 0,
+    dueProjects: 0,
+    totalPayment: 0,
+    paid: 0,
+    owed: 0,
+  };
+
+  return res.status(200).json({ success: true, data: result });
+});
+
+export const getClientProjectStatusPie = asyncHandler(async (req, res) => {
+  const { clientId } = req.params;
+
+  if (!clientId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Client ID required" });
+  }
+
+  const today = moment().endOf("day").toDate();
+
+  const getStatusCount = async (startDate, endDate) => {
+    const stats = await Project.aggregate([
+      {
+        $match: {
+          client: clientId,
+          createdAt: { $gte: startDate, $lte: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          active: { $sum: { $cond: [{ $eq: ["$status", "Active"] }, 1, 0] } },
+          completed: {
+            $sum: { $cond: [{ $eq: ["$status", "Completed"] }, 1, 0] },
+          },
+          due: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $lte: ["$dueDate", today] },
+                    { $ne: ["$status", "Completed"] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          overdue: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $lt: ["$dueDate", today] },
+                    { $ne: ["$status", "Completed"] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    const s = stats[0] || {
+      total: 0,
+      active: 0,
+      completed: 0,
+      due: 0,
+      overdue: 0,
+    };
+
+    return [
+      { key: "total", value: s.total },
+      { key: "active", value: s.active },
+      { key: "completed", value: s.completed },
+      { key: "due", value: s.due },
+      { key: "overdue", value: s.overdue },
+    ];
+  };
+
+  // --- Date ranges ---
+  const lastWeekStart = moment().subtract(6, "days").startOf("day").toDate();
+  const lastMonthStart = moment().subtract(29, "days").startOf("day").toDate();
+  const lastYearStart = moment()
+    .subtract(11, "months")
+    .startOf("month")
+    .toDate();
+
+  // --- Fetch stats ---
+  const week = await getStatusCount(lastWeekStart, today);
+  const month = await getStatusCount(lastMonthStart, today);
+  const year = await getStatusCount(lastYearStart, today);
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      week,
+      month,
+      year,
+    },
+  });
+});
+
+export const getClientProjectPayment = asyncHandler(async (req, res) => {
+  const { clientId, projectId } = req.params; // projectId optional
+
+  if (!clientId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Client ID required" });
+  }
+
+  const matchFilter = { client: clientId };
+  if (projectId) matchFilter._id = projectId;
+
+  const stats = await Project.aggregate([
+    { $match: matchFilter },
+    {
+      $group: {
+        _id: null,
+        totalPayment: { $sum: "$finalAmountForClient" },
+        paid: { $sum: "$amountPaidByClient" },
+        owed: { $sum: "$amountOwedByClient" },
+      },
+    },
+  ]);
+
+  const s = stats[0] || { totalPayment: 0, paid: 0, owed: 0 };
+
+  const keyValueResult = [
+    { key: "Total Payment", value: s.totalPayment },
+    { key: "Paid", value: s.paid },
+    { key: "Owed", value: s.owed },
+  ];
+
+  res.status(200).json({ success: true, data: keyValueResult });
+});
+
+//for Member
+
+export const getFreelancerStats = async (req, res, next) => {
+  try {
+    const { freelancerId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(freelancerId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid freelancer ID" });
+    }
+
+    // Get start and end of current month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+
+    // --- Project Payments ---
+    const paymentStats = await ProjectMember.aggregate([
+      { $match: { freelancer: freelancerId } },
+      {
+        $group: {
+          _id: null,
+          totalEarnings: { $sum: "$haveToPay" },
+          totalPaid: { $sum: "$amountPaid" },
+          totalOwed: { $sum: "$amountOwed" },
+        },
+      },
+    ]);
+
+    const {
+      totalEarnings = 0,
+      totalPaid = 0,
+      totalOwed = 0,
+    } = paymentStats[0] || {};
+
+    // --- Task Stats (this month) ---
+    const taskFilter = {
+      members: new mongoose.Types.ObjectId(freelancerId),
+      createdAt: { $gte: startOfMonth, $lt: endOfMonth },
+    };
+
+    const [totalTasks, totalDueTasks, totalOverdueTasks, totalCompletedTasks] =
+      await Promise.all([
+        // Total tasks created this month
+        Task.countDocuments(taskFilter),
+
+        // Due tasks this month (not completed)
+        Task.countDocuments({
+          ...taskFilter,
+          status: { $ne: "Completed" },
+          dueDate: { $gte: startOfMonth, $lt: endOfMonth },
+        }),
+
+        // Overdue tasks (due date passed, not completed)
+        Task.countDocuments({
+          members: new mongoose.Types.ObjectId(freelancerId),
+          dueDate: { $lt: new Date() },
+          status: { $ne: "Completed" },
+        }),
+
+        // Completed tasks this month
+        Task.countDocuments({
+          members: new mongoose.Types.ObjectId(freelancerId),
+          status: "Completed",
+          completionDate: { $gte: startOfMonth, $lt: endOfMonth },
+        }),
+      ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalEarnings,
+        totalPaid,
+        totalOwed,
+        totalTasks,
+        totalDueTasks,
+        totalOverdueTasks,
+        totalCompletedTasks,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getFreelancerTaskSummary = async (req, res, next) => {
+  try {
+    const { freelancerId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(freelancerId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid freelancer ID" });
+    }
+
+    const now = new Date();
+
+    // Define periods
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - 7);
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+    // Helper to get stats for any range
+    const getStats = async (startDate) => {
+      const [active, completed, overdue] = await Promise.all([
+        // Active = Not Completed
+        Task.countDocuments({
+          members: freelancerId,
+          status: { $ne: "Completed" },
+          createdAt: { $gte: startDate, $lte: now },
+        }),
+        // Completed tasks
+        Task.countDocuments({
+          members: freelancerId,
+          status: "Completed",
+          completionDate: { $gte: startDate, $lte: now },
+        }),
+        // Overdue tasks (due date passed and not completed)
+        Task.countDocuments({
+          members: freelancerId,
+          dueDate: { $lt: now },
+          status: { $ne: "Completed" },
+          createdAt: { $gte: startDate },
+        }),
+      ]);
+
+      return [
+        {
+          key: "Active",
+          value: active,
+        },
+        {
+          key: "Completed",
+          value: completed,
+        },
+        {
+          key: "Overdue",
+          value: overdue,
+        },
+      ];
+    };
+
+    const [week, month, year] = await Promise.all([
+      getStats(startOfWeek),
+      getStats(startOfMonth),
+      getStats(startOfYear),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        week,
+        month,
+        year,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getFreelancerEarningsStats = async (req, res, next) => {
+  try {
+    const { freelancerId } = req.params;
+    const { projectId } = req.query; // optional ?projectId=...
+
+    if (!mongoose.Types.ObjectId.isValid(freelancerId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid freelancer ID" });
+    }
+
+    const now = moment();
+    const startOfMonth = now.clone().startOf("month").toDate();
+    const endOfMonth = now.clone().endOf("month").toDate();
+
+    // 🔍 Build filter
+    const filter = {
+      freelancer: freelancerId,
+    };
+
+    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
+      filter.project = projectId;
+    }
+
+    // 🔢 Aggregate stats for this month
+    const stats = await ProjectMember.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          totalEarnings: { $sum: "$haveToPay" },
+          totalPaid: { $sum: "$amountPaid" },
+          totalOwed: { $sum: "$amountOwed" },
+        },
+      },
+    ]);
+
+    const { totalEarnings = 0, totalPaid = 0, totalOwed = 0 } = stats[0] || {};
+
+    return res.status(200).json({
+      success: true,
+      data: [
+        {
+          key: "Total Earnings",
+          value: totalEarnings,
+        },
+        {
+          key: "Total Paid",
+          value: totalPaid,
+        },
+        {
+          key: "Total Owed",
+          value: totalOwed,
+        },
+      ],
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // const getProjectActivity = asyncHandler(async (clientId = null) => {
 //   const twelveMonthsAgo = moment().subtract(12, "months").startOf("month").toDate();
