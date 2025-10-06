@@ -690,25 +690,30 @@ const getProjectStatistics = asyncHandler(async (req, res, next) => {
 
 ////// for task
 const getTaskStatistics = asyncHandler(async (req, res) => {
-  const today = moment().startOf("day").toDate(); // today's date at 00:00
+  const todayStart = moment().startOf("day").toDate();
+  const todayEnd = moment().endOf("day").toDate();
+  const monthStart = moment().startOf("month").toDate();
+  const monthEnd = moment().endOf("month").toDate();
 
   const stats = await Task.aggregate([
     {
       $group: {
         _id: null,
-        total: { $sum: 1 }, // total tasks
+        total: { $sum: 1 },
+
+        // Active today
         active: {
           $sum: {
             $cond: [
               {
                 $and: [
-                  { $lte: ["$startDate", today] }, // started
+                  { $lte: ["$startDate", todayEnd] },
                   {
                     $or: [
                       { $eq: ["$completionDate", null] },
-                      { $gt: ["$completionDate", today] },
+                      { $gt: ["$completionDate", todayEnd] },
                     ],
-                  }, // not completed
+                  },
                 ],
               },
               1,
@@ -716,28 +721,52 @@ const getTaskStatistics = asyncHandler(async (req, res) => {
             ],
           },
         },
-        completed: {
-          $sum: {
-            $cond: [{ $lte: ["$completionDate", today] }, 1, 0],
-          },
-        },
+
+        // Due today
         due: {
           $sum: {
-            $cond: [{ $eq: ["$dueDate", today] }, 1, 0],
+            $cond: [
+              {
+                $and: [
+                  { $gte: ["$dueDate", todayStart] },
+                  { $lte: ["$dueDate", todayEnd] },
+                ],
+              },
+              1,
+              0,
+            ],
           },
         },
+
+        // Overdue tasks (past due, not completed)
         overdue: {
           $sum: {
             $cond: [
               {
                 $and: [
-                  { $lt: ["$dueDate", today] }, // due date before today
+                  { $lt: ["$dueDate", todayStart] },
                   {
                     $or: [
                       { $eq: ["$completionDate", null] },
                       { $gt: ["$completionDate", "$dueDate"] },
                     ],
-                  }, // not completed on time
+                  },
+                ],
+              },
+              1,
+              0,
+            ],
+          },
+        },
+
+        // Completed this month
+        completed: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $gte: ["$completionDate", monthStart] },
+                  { $lte: ["$completionDate", monthEnd] },
                 ],
               },
               1,
@@ -767,8 +796,119 @@ const getTaskStatistics = asyncHandler(async (req, res) => {
   };
 });
 
+// const getProjectTaskActivity = asyncHandler(
+//   async (model, clientId = null, memberId = null) => {
+//     const twelveMonthsAgo = moment()
+//       .subtract(12, "months")
+//       .startOf("month")
+//       .toDate();
+
+//     //   // Build filter
+//     const filter = { createdAt: { $gte: twelveMonthsAgo } };
+//     if (clientId) filter.client = clientId; // optional client filter
+//     if (memberId) filter.members = memberId; // optional client filter
+
+//     // Fetch projects (all or specific client)
+//     const projects = await model.find(filter);
+
+//     // Helper: count active, completed, due, overdue for a given date range
+//     const countByDate = (projects, date, unit = "day") => {
+//       let startRange, endRange;
+
+//       if (unit === "day") {
+//         startRange = date.clone().startOf("day");
+//         endRange = date.clone().endOf("day");
+//       } else if (unit === "month") {
+//         startRange = date.clone().startOf("month");
+//         endRange = date.clone().endOf("month");
+//       } else {
+//         throw new Error("Unsupported unit for countByDate");
+//       }
+
+//       let active = 0,
+//         completed = 0,
+//         due = 0,
+//         overdue = 0;
+
+//       projects.forEach((p) => {
+//         const start = p.startDate ? moment(p.startDate) : null;
+//         const dueDate = p.dueDate ? moment(p.dueDate) : null;
+//         const completion = p.completionDate ? moment(p.completionDate) : null;
+
+//         // --- Completed ---
+//         if (
+//           completion &&
+//           completion.isBetween(startRange, endRange, null, "[]")
+//         ) {
+//           completed++;
+//         }
+
+//         // --- Due ---
+//         if (dueDate && dueDate.isBetween(startRange, endRange, null, "[]")) {
+//           due++;
+//         }
+
+//         // --- Active ---
+//         // A task is active if:
+//         // It started on/before this day, and not yet completed before this day
+//         if (
+//           start &&
+//           start.isSameOrBefore(endRange) &&
+//           (!completion || completion.isAfter(endRange))
+//         ) {
+//           active++;
+//         }
+
+//         // --- Overdue ---
+//         if (
+//           dueDate &&
+//           dueDate.isSameOrBefore(endRange) &&
+//           (!completion || completion.isAfter(endRange))
+//         ) {
+//           overdue++;
+//         }
+//       });
+
+//       return { active, completed, due, overdue };
+//     };
+
+//     // --- Last 7 days ---
+//     const week = [];
+//     for (let i = 6; i >= 0; i--) {
+//       const date = moment().subtract(i, "days");
+//       week.push({
+//         Key: date.format("ddd"),
+//         ...countByDate(projects, date, "day"),
+//       });
+//     }
+
+//     // --- Last 30 days ---
+//     const month = [];
+//     for (let i = 29; i >= 0; i--) {
+//       const date = moment().subtract(i, "days");
+//       month.push({
+//         Key: date.format("DD"),
+//         ...countByDate(projects, date, "day"),
+//       });
+//     }
+
+//     // --- Last 12 months ---
+//     const year = [];
+//     for (let i = 11; i >= 0; i--) {
+//       const date = moment().subtract(i, "months");
+//       year.push({
+//         Key: date.format("MMM"),
+//         ...countByDate(projects, date, "month"),
+//       });
+//     }
+
+//     return { week, month, year };
+//   }
+// );
+
 const getProjectTaskActivity = asyncHandler(
   async (model, clientId = null, memberId = null) => {
+    // Current Time: Monday, October 6, 2025 (Assuming this is 'now' for calculations)
     const twelveMonthsAgo = moment()
       .subtract(12, "months")
       .startOf("month")
@@ -777,13 +917,13 @@ const getProjectTaskActivity = asyncHandler(
     //   // Build filter
     const filter = { createdAt: { $gte: twelveMonthsAgo } };
     if (clientId) filter.client = clientId; // optional client filter
-    if (memberId) filter.members = memberId; // optional client filter
+    if (memberId) filter.members = memberId; // optional member filter (Note: your filter is 'members', not 'memberId')
 
-    // Fetch projects (all or specific client)
-    const projects = await model.find(filter);
+    // Fetch tasks (all or specific client/member) - Renamed 'projects' to 'tasks' internally for clarity
+    const tasks = await model.find(filter);
 
     // Helper: count active, completed, due, overdue for a given date range
-    const countByDate = (projects, date, unit = "day") => {
+    const countByDate = (tasks, date, unit = "day") => {
       let startRange, endRange;
 
       if (unit === "day") {
@@ -801,12 +941,13 @@ const getProjectTaskActivity = asyncHandler(
         due = 0,
         overdue = 0;
 
-      projects.forEach((p) => {
-        const start = p.startDate ? moment(p.startDate) : null;
+      tasks.forEach((p) => {
+        // Use startDate if available, otherwise fall back to createdAt (based on schema default)
+        const start = moment(p.startDate || p.createdAt);
         const dueDate = p.dueDate ? moment(p.dueDate) : null;
         const completion = p.completionDate ? moment(p.completionDate) : null;
 
-        // --- Completed ---
+        // 1. Completed: completion happened within the range [startRange, endRange]
         if (
           completion &&
           completion.isBetween(startRange, endRange, null, "[]")
@@ -814,23 +955,22 @@ const getProjectTaskActivity = asyncHandler(
           completed++;
         }
 
-        // --- Due ---
+        // 2. Due: due date happened within the range [startRange, endRange]
         if (dueDate && dueDate.isBetween(startRange, endRange, null, "[]")) {
           due++;
         }
 
-        // --- Active ---
-        // A task is active if:
-        // It started on/before this day, and not yet completed before this day
-        if (
-          start &&
-          start.isSameOrBefore(endRange) &&
-          (!completion || completion.isAfter(endRange))
-        ) {
+        // 3. Active: Project started on or before the end date (endRange) AND
+        //    it was NOT completed before the start date (startRange).
+        //    This counts tasks that were active at any point during the period.
+        const isCompletedBeforeStart =
+          completion && completion.isBefore(startRange);
+        if (start.isSameOrBefore(endRange) && !isCompletedBeforeStart) {
           active++;
         }
 
-        // --- Overdue ---
+        // 4. Overdue: Due date is on or before the end date (endRange) AND
+        //    it was NOT completed by the end date (endRange).
         if (
           dueDate &&
           dueDate.isSameOrBefore(endRange) &&
@@ -843,37 +983,84 @@ const getProjectTaskActivity = asyncHandler(
       return { active, completed, due, overdue };
     };
 
-    // --- Last 7 days ---
+    // ------------------------------------------------------------------------------------------------
+
+    // --- Last 7 days Trend ---
     const week = [];
+    const weekStart = moment().subtract(6, "days").startOf("day");
+    const weekEnd = moment().endOf("day");
     for (let i = 6; i >= 0; i--) {
       const date = moment().subtract(i, "days");
       week.push({
         Key: date.format("ddd"),
-        ...countByDate(projects, date, "day"),
+        ...countByDate(tasks, date, "day"),
       });
     }
 
-    // --- Last 30 days ---
+    // --- Last 30 days Trend ---
     const month = [];
+    const monthStart = moment().subtract(29, "days").startOf("day");
+    const monthEnd = moment().endOf("day");
     for (let i = 29; i >= 0; i--) {
       const date = moment().subtract(i, "days");
       month.push({
         Key: date.format("DD"),
-        ...countByDate(projects, date, "day"),
+        ...countByDate(tasks, date, "day"),
       });
     }
 
-    // --- Last 12 months ---
+    // --- Last 12 months Trend ---
     const year = [];
+    const yearStart = moment().subtract(11, "months").startOf("month");
+    const yearEnd = moment().endOf("month");
     for (let i = 11; i >= 0; i--) {
       const date = moment().subtract(i, "months");
       year.push({
         Key: date.format("MMM"),
-        ...countByDate(projects, date, "month"),
+        ...countByDate(tasks, date, "month"),
       });
     }
 
-    return { week, month, year };
+    // ------------------------------------------------------------------------------------------------
+
+    // --- Distinct Project/Task Summary for the whole period ---
+    const getDistinctSummary = (tasks, startPeriod, endPeriod) => {
+      // Filter tasks that were active, due, or completed within the whole period
+      const relevantTasks = tasks.filter((p) => {
+        const start = moment(p.startDate || p.createdAt);
+        const completion = p.completionDate ? moment(p.completionDate) : null;
+
+        // Task was open during the period (Started before end, and completed after start/not completed)
+        const wasOpenInPeriod =
+          start.isSameOrBefore(endPeriod) &&
+          (!completion || completion.isAfter(startPeriod));
+
+        // Task was completed in the period
+        const wasCompletedInPeriod =
+          completion &&
+          completion.isBetween(startPeriod, endPeriod, null, "[]");
+
+        // Task was created in the period (for completeness)
+        const wasCreatedInPeriod = moment(p.createdAt).isBetween(
+          startPeriod,
+          endPeriod,
+          null,
+          "[]"
+        );
+
+        return wasOpenInPeriod || wasCompletedInPeriod || wasCreatedInPeriod;
+      });
+
+      return relevantTasks.length;
+    };
+
+    const summary = {
+      week: getDistinctSummary(tasks, weekStart, weekEnd),
+      month: getDistinctSummary(tasks, monthStart, monthEnd),
+      year: getDistinctSummary(tasks, yearStart, yearEnd),
+    };
+
+    return { week, month, year, summary };
   }
 );
 

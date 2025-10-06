@@ -104,14 +104,12 @@ export const addProjectActivity = asyncHandler(
   async (title, projectId, date) => {
     try {
       const newActivity = new ProjectActivity({
-        title, // ES6 Shorthand property name
+        title, 
         project: projectId,
         date,
       });
 
       const savedActivity = await newActivity.save();
-
-      // Return the created activity
       return savedActivity;
     } catch (error) {
       console.error("Error logging project activity:", error);

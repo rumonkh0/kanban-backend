@@ -153,6 +153,7 @@ projectSchema.pre(
   { document: true, query: false },
   async function (next) {
     await this.model("ProjectMember").deleteMany({ project: this._id });
+    await this.model("ProjectActivity").deleteMany({ project: this._id });
     next();
   }
 );

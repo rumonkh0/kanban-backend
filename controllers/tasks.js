@@ -8,6 +8,8 @@ import File from "../models/File.js";
 import { generateKeyBetween } from "fractional-indexing";
 import fs from "fs";
 import path from "path";
+import { addProjectActivity } from "./projectActivity.js";
+import sendEmail from "../utils/sendEmail.js";
 
 // @desc      Create a task
 // @route     POST /api/v1/projects/:projectId/stages/:stageId/tasks
@@ -29,12 +31,35 @@ export const createTask = asyncHandler(async (req, res, next) => {
   }
   if (members && members.length > 0) {
     for (const memberId of members) {
-      const existingMember = await Freelancer.findById(memberId);
+      const existingMember = await Freelancer.findById(memberId).populate(
+        "user",
+        "email"
+      );
       if (!existingMember) {
         return next(
           new ErrorResponse(`Freelancer not found with ID ${memberId}`, 404)
         );
       }
+      await addProjectActivity(
+        `${existingMember.name} added to task ${req.body.title}`,
+        memberId
+      );
+
+      try {
+        await sendEmail({
+          to: existingFreelancer.user.email,
+          subject: "You have been assigned to a new task",
+          message: `Hi ${existingFreelancer.name},
+
+You've been assigned to a new task: "${req.body.title}".
+
+Please check the project details and your tasks on the platform.
+
+Best regards,
+The Team
+`,
+        });
+      } catch {}
     }
   }
 
@@ -66,6 +91,8 @@ export const createTask = asyncHandler(async (req, res, next) => {
     files: fileIds,
     images: imageIds,
   });
+
+  await addProjectActivity(`New task added - ${task.title}`, req.body.project);
 
   res.status(201).json({
     success: true,
@@ -112,7 +139,7 @@ export const getTasks = asyncHandler(async (req, res, next) => {
       path: "coverImage",
       select: "originalName filePath",
     })
-    .populate({ path: "stage", select: "title" })
+    // .populate({ path: "stage", select: "title" })
     .populate({
       path: "comments",
       options: { sort: { createdAt: 1 } },
@@ -180,6 +207,25 @@ export const updateTask = asyncHandler(async (req, res, next) => {
     return next(
       new ErrorResponse(`Task not found with id of ${req.params.id}`, 404)
     );
+  }
+
+  let newMembers = req.body.members;
+  const oldMembers = task.members.map((memberId) => memberId.toString());
+  if (newMembers) {
+    const newMembersSet = new Set(newMembers.map((id) => id.toString()));
+    const oldMembersSet = new Set(oldMembers);
+
+    const membersToDelete = oldMembers.filter((id) => !newMembersSet.has(id));
+    const membersToAdd = newMembers.filter(
+      (id) => !oldMembersSet.has(id.toString())
+    );
+
+    if (membersToAdd.length > 0) {
+      const memberCreationPromises = membersToAdd.map((freelancerId) =>
+        addProjectMember(project._id, freelancerId, project)
+      );
+      await Promise.all(memberCreationPromises);
+    }
   }
 
   const existingFileIds = req.body.files || [];

@@ -156,6 +156,10 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
   }
 });
 
+// @desc      Forgot password
+// @route     POST /api/v1/auth/verifyotp
+// @access    Public
+
 // @desc      Reset password
 // @route     PUT /api/v1/auth/resetpassword
 // @access    Public

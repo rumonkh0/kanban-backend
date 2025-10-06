@@ -7,7 +7,7 @@ import Notification from "../models/Notification.js";
 // @access    Private
 export const getNotifications = asyncHandler(async (req, res, next) => {
   const { isRead } = req.query;
-  const filter = { recipient: req.user.id };
+  const filter = { recipient: req.user.profile._id };
 
   if (isRead === "false") {
     filter.isRead = false;
@@ -15,7 +15,7 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
 
   const notifications = await Notification.find(filter)
     .sort({ createdAt: -1 })
-    .limit(50); 
+    .limit(50);
 
   res.status(200).json({
     success: true,
@@ -29,7 +29,7 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
 // @access    Private
 export const markAsRead = asyncHandler(async (req, res, next) => {
   const notification = await Notification.findOneAndUpdate(
-    { _id: req.params.id, recipient: req.user.id },
+    { _id: req.params.id, recipient: req.user.profile._id },
     { isRead: true },
     { new: true }
   );
@@ -51,7 +51,7 @@ export const markAsRead = asyncHandler(async (req, res, next) => {
 // @access    Private
 export const markAllAsRead = asyncHandler(async (req, res, next) => {
   await Notification.updateMany(
-    { recipient: req.user.id, isRead: false },
+    { recipient: req.user.profile._id, isRead: false },
     { isRead: true }
   );
 
@@ -92,7 +92,7 @@ export const createNotification = async ({ recipient, message }) => {
       recipient,
       message,
     });
-    console.log(`Notification created for user ${recipient}`);
+    // console.log(`Notification created for user ${recipient}`);
   } catch (err) {
     console.error(`Error creating notification: ${err.message}`);
   }

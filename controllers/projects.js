@@ -7,6 +7,10 @@ import Freelancer from "../models/Freelancer.js";
 import File from "../models/File.js";
 import fs from "fs";
 import ProjectMember from "../models/ProjectMember.js";
+import { addProjectActivity } from "./projectActivity.js";
+import { createNotification } from "./notifications.js";
+import sendEmail from "../utils/sendEmail.js";
+import { addProjectMember } from "./projectMembers.js";
 
 // @desc      Create a project
 // @route     POST /api/v1/projects
@@ -41,6 +45,7 @@ export const createProject = asyncHandler(async (req, res, next) => {
       return next(new ErrorResponse("Client not found.", 404));
     }
   }
+
   if (members && members.length > 0) {
     for (const memberId of members) {
       const existingMember = await Freelancer.findById(memberId);
@@ -110,15 +115,16 @@ export const createProject = asyncHandler(async (req, res, next) => {
     finalAmountEarned,
   });
 
+  await addProjectActivity("Project Created", project._id);
+
   // 5. Create a ProjectMember document for each freelancer
+
   if (members && members.length > 0) {
-    const memberCreationPromises = members.map((freelancerId) =>
-      ProjectMember.create({
-        project: project._id,
-        freelancer: freelancerId,
-      })
-    );
-    await Promise.all(memberCreationPromises);
+    const memberPromises = members.map(async (freelancerId) => {
+      addProjectMember(project._id, freelancerId, project);
+    });
+
+    await Promise.all(memberPromises);
   }
 
   res.status(201).json({
@@ -316,10 +322,7 @@ export const updateProject = asyncHandler(async (req, res, next) => {
 
     if (membersToAdd.length > 0) {
       const memberCreationPromises = membersToAdd.map((freelancerId) =>
-        ProjectMember.create({
-          project: project._id,
-          freelancer: freelancerId,
-        })
+        addProjectMember(project._id, freelancerId, project)
       );
       await Promise.all(memberCreationPromises);
     }

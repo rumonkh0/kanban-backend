@@ -17,6 +17,7 @@ router.get("/me", protect, getMe);
 // router.put("/updatedetails", protect, updateDetails);
 router.put("/updatepassword", protect, updatePassword);
 router.post("/forgotpassword", forgotPassword);
-router.put("/resetpassword", resetPassword);
+router.post("verifyotp", resetPassword)
+router.post("/resetpassword", resetPassword);
 
 export default router;
