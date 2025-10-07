@@ -22,9 +22,13 @@ import {
   getProjectActivity,
   getProjectDeadline,
   getProjectEarningsSummary,
+  getProjectsReport,
   getProjectStat,
+  getRevenueReport,
   getTaskActivity,
+  getTaskCountByStage,
   getTaskDeadline,
+  getTaskReport,
   getTaskStat,
 } from "../controllers/dashboard.js";
 import { authorize, protect } from "../middleware/auth.js";
@@ -80,6 +84,12 @@ router
   .get(
     "/freelancer/:freelancerId/freelancerearning",
     getFreelancerEarningsStats
-  );
+  )
+
+  //report
+  .get("/taskreport", getTaskReport)
+  .get("/taskrevenuereport", getRevenueReport)
+  .get("/taskprojectreport", getProjectsReport)
+  .get("/taskstagereport", getTaskCountByStage);
 
 export default router;

@@ -41,7 +41,20 @@ export const getProjectMembers = asyncHandler(async (req, res, next) => {
   }
 
   const members = await ProjectMember.find(filter)
-    .populate("project", "projectName")
+    .populate({
+      path: "project",
+      select: "projectName status client",
+      populate: [
+        {
+          path: "client",
+          select: "name profilePicture",
+          populate: {
+            path: "profilePicture",
+            select: "filePath",
+          },
+        },
+      ],
+    })
     .populate({
       path: "freelancer",
       select: "name user profilePicture",
@@ -55,7 +68,8 @@ export const getProjectMembers = asyncHandler(async (req, res, next) => {
           select: "email",
         },
       ],
-    });
+    })
+    .limit(req.query.limit);
 
   res.status(200).json({
     success: true,

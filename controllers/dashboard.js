@@ -9,6 +9,7 @@ import Payment from "../models/Payment.js";
 import Appreciation from "../models/Appreciation.js";
 import mongoose from "mongoose";
 import ProjectMember from "../models/ProjectMember.js";
+import Stage from "../models/Stage.js";
 
 // @desc      Get admin dashboard
 // @route     GET /api/v1/admin/dashboard/private
@@ -2031,6 +2032,233 @@ export const getFreelancerEarningsStats = async (req, res, next) => {
     next(error);
   }
 };
+
+//for reports
+export const getTaskReport = asyncHandler(async (req, res) => {
+  const now = new Date();
+
+  const stats = await Task.aggregate([
+    {
+      $facet: {
+        totalTasks: [{ $count: "count" }],
+
+        totalAssigned: [
+          { $match: { members: { $exists: true, $not: { $size: 0 } } } },
+          { $count: "count" },
+        ],
+
+        totalActive: [
+          {
+            $match: {
+              status: { $in: ["In Progress", "Not Started"] },
+              completionDate: { $in: [null, undefined] },
+            },
+          },
+          { $count: "count" },
+        ],
+
+        totalCompleted: [
+          { $match: { status: "Completed" } },
+          { $count: "count" },
+        ],
+
+        totalOverdue: [
+          {
+            $match: {
+              dueDate: { $lt: now },
+              status: { $ne: "Completed" },
+            },
+          },
+          { $count: "count" },
+        ],
+
+        avgCompletionTime: [
+          {
+            $match: {
+              completionDate: { $ne: null },
+              startDate: { $ne: null },
+            },
+          },
+          {
+            $project: {
+              diffDays: {
+                $divide: [
+                  { $subtract: ["$completionDate", "$startDate"] },
+                  1000 * 60 * 60 * 24, // convert ms → days
+                ],
+              },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              avgDays: { $avg: "$diffDays" },
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        totalTasks: {
+          $ifNull: [{ $arrayElemAt: ["$totalTasks.count", 0] }, 0],
+        },
+        totalAssigned: {
+          $ifNull: [{ $arrayElemAt: ["$totalAssigned.count", 0] }, 0],
+        },
+        totalActive: {
+          $ifNull: [{ $arrayElemAt: ["$totalActive.count", 0] }, 0],
+        },
+        totalCompleted: {
+          $ifNull: [{ $arrayElemAt: ["$totalCompleted.count", 0] }, 0],
+        },
+        totalOverdue: {
+          $ifNull: [{ $arrayElemAt: ["$totalOverdue.count", 0] }, 0],
+        },
+        averageCompletionTime: {
+          $round: [
+            {
+              $ifNull: [{ $arrayElemAt: ["$avgCompletionTime.avgDays", 0] }, 0],
+            },
+            1,
+          ],
+        },
+      },
+    },
+  ]);
+
+  const data = stats[0] || {};
+
+  // ✅ Format into key–value pairs
+  const formatted = [
+    // { key: "Total Tasks", value: data.totalTasks || 0 },
+    { key: "Task Assigned", value: data.totalAssigned || 0 },
+    { key: "Active", value: data.totalActive || 0 },
+    { key: "Completed Tasks", value: data.totalCompleted || 0 },
+    { key: "Overdue", value: data.totalOverdue || 0 },
+    {
+      key: "Avg. Completion Time",
+      value: data.averageCompletionTime || 0,
+    },
+  ];
+
+  res.status(200).json({
+    success: true,
+    data: formatted,
+  });
+});
+
+export const getRevenueReport = asyncHandler(async (req, res, next) => {
+  const data = await getTotalRevenue();
+  res.status(200).json({ success: true, data });
+});
+
+export const getProjectsReport = asyncHandler(async (req, res) => {
+  const today = moment().endOf("day").toDate();
+
+  const stats = await Project.aggregate([
+    {
+      $match: {
+        archive: false, // only non-archived projects
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        active: { $sum: { $cond: [{ $eq: ["$status", "Active"] }, 1, 0] } },
+        completed: {
+          $sum: { $cond: [{ $eq: ["$status", "Completed"] }, 1, 0] },
+        },
+        overdue: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $lt: ["$dueDate", today] },
+                  { $ne: ["$status", "Completed"] },
+                  { $ne: ["$status", "Cancelled"] },
+                ],
+              },
+              1,
+              0,
+            ],
+          },
+        },
+      },
+    },
+  ]);
+
+  const result = stats[0] || {
+    active: 0,
+    completed: 0,
+    overdue: 0,
+  };
+
+  // Convert to key-value format (for charts or cards)
+  const formatted = [
+    { key: "Active", value: result.active },
+    { key: "Completed", value: result.completed },
+    { key: "Overdue", value: result.overdue },
+  ];
+
+  res.status(200).json({
+    success: true,
+    data: formatted,
+  });
+});
+export const getTaskCountByStage = asyncHandler(async (req, res) => {
+  // Aggregate task counts grouped by stage
+  const stageStats = await Task.aggregate([
+    {
+      $group: {
+        _id: "$stage",
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: "stages",
+        localField: "_id",
+        foreignField: "_id",
+        as: "stageInfo",
+      },
+    },
+    {
+      $unwind: {
+        path: "$stageInfo",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        stageId: "$_id",
+        title: "$stageInfo.title",
+        color: "$stageInfo.color",
+        order: "$stageInfo.order",
+        count: 1,
+      },
+    },
+    { $sort: { order: 1 } }, // optional sorting by stage order
+  ]);
+
+  // Include stages that have 0 tasks
+  const allStages = await Stage.find({}, "title color order").lean();
+  const stageMap = new Map(stageStats.map((s) => [s.stageId?.toString(), s]));
+
+  const fullList = allStages.map((stage) => ({
+    stageId: stage._id,
+    title: stage.title,
+    color: stage.color,
+    order: stage.order,
+    count: stageMap.get(stage._id.toString())?.count || 0,
+  }));
+
+  res.status(200).json({
+    success: true,
+    data: fullList,
+  });
+});
 
 // const getProjectActivity = asyncHandler(async (clientId = null) => {
 //   const twelveMonthsAgo = moment().subtract(12, "months").startOf("month").toDate();

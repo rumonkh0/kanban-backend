@@ -11,6 +11,8 @@ import { addProjectActivity } from "./projectActivity.js";
 import { createNotification } from "./notifications.js";
 import sendEmail from "../utils/sendEmail.js";
 import { addProjectMember } from "./projectMembers.js";
+import mongoose from "mongoose";
+import Task from "../models/Task.js";
 
 // @desc      Create a project
 // @route     POST /api/v1/projects
@@ -202,6 +204,108 @@ export const getProject = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     data: project,
+  });
+});
+
+// @desc      Get a single project
+// @route     GET /api/v1/projects/:id
+// @access    Private
+export const getProjectDetails = asyncHandler(async (req, res, next) => {
+  const projectId = req.params.id;
+
+  // 1️⃣ Fetch the project with client details populated
+  const project = await Project.findById(projectId)
+    .populate({
+      path: "client",
+      select: "name profilePicture user",
+      populate: [
+        { path: "profilePicture", select: "filePath" },
+        { path: "user", select: "email" },
+      ],
+    })
+    .lean();
+
+  if (!project) {
+    return next(
+      new ErrorResponse(`Project not found with id of ${projectId}`, 404)
+    );
+  }
+
+  // 2️⃣ Client project stats (total + active)
+  const clientId = project.client?._id;
+
+  let clientStats = { totalProjects: 0, activeProjects: 0 };
+
+  if (clientId) {
+    const clientProjectStats = await Project.aggregate([
+      { $match: { client: new mongoose.Types.ObjectId(clientId) } },
+      {
+        $group: {
+          _id: null,
+          totalProjects: { $sum: 1 },
+          activeProjects: {
+            $sum: { $cond: [{ $eq: ["$status", "Active"] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    clientStats = clientProjectStats[0] || clientStats;
+  }
+
+  // 3️⃣ Task stats for this project (group by status)
+  const taskStats = await Task.aggregate([
+    { $match: { project: new mongoose.Types.ObjectId(projectId) } },
+    {
+      $facet: {
+        active: [
+          { $match: { status: { $in: ["Active", "In Progress"] } } },
+          { $count: "count" },
+        ],
+        completed: [{ $match: { status: "Completed" } }, { $count: "count" }],
+        overdue: [
+          {
+            $match: {
+              dueDate: { $lt: new Date() },
+              status: { $ne: "Completed" },
+            },
+          },
+          { $count: "count" },
+        ],
+      },
+    },
+    {
+      $project: {
+        active: { $ifNull: [{ $arrayElemAt: ["$active.count", 0] }, 0] },
+        completed: { $ifNull: [{ $arrayElemAt: ["$completed.count", 0] }, 0] },
+        overdue: { $ifNull: [{ $arrayElemAt: ["$overdue.count", 0] }, 0] },
+      },
+    },
+  ]);
+
+  // Format task stats for readability
+  const taskSummary = {
+    Active: 0,
+    Completed: 0,
+    Overdue: 0,
+  };
+  taskStats.forEach((s) => (taskSummary[s._id] = s.count));
+
+  // 4️⃣ Combine everything
+  res.status(200).json({
+    success: true,
+    data: {
+      ...project,
+      clientStats: {
+        totalProjects: clientStats.totalProjects || 0,
+        activeProjects: clientStats.activeProjects || 0,
+      },
+      taskStats: [
+        { key: "Active", value: taskSummary["Active"] },
+        { key: "Completed", value: taskSummary["Completed"] },
+        { key: "Overdue", value: taskSummary["Overdue"] },
+      ],
+    },
   });
 });
 

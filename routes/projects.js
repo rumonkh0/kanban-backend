@@ -8,6 +8,7 @@ import {
   getProject,
   updateProject,
   deleteProject,
+  getProjectDetails,
 } from "../controllers/projects.js";
 import notes from "./notes.js";
 import payments from "./payments.js";
@@ -79,5 +80,6 @@ router
   .get(getProject)
   .put(uploadFields, authorize("Admin"), updateProject)
   .delete(authorize("Admin"), deleteProject);
+router.get("/:id/details", authorize("Admin"), getProjectDetails);
 
 export default router;
