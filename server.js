@@ -92,11 +92,19 @@ const __dirname = path.dirname(__filename);
 app.use(
   express.static(path.join(__dirname, "public"), {
     setHeaders: (res, filePath) => {
+      // Allow cross-origin for all static files
       res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+
+      // Optional: allow only your frontend domain
+      res.setHeader(
+        "Access-Control-Allow-Origin",
+        process.env.NODE_ENV === "production"
+          ? "https://kanban-eight-sigma.vercel.app"
+          : "*"
+      );
     },
   })
 );
-
 // Mount routers
 app.use("/api/v1/auth", auth);
 app.use("/api/v1/dashboard", dashboard);
