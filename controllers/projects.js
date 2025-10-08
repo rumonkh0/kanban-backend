@@ -148,7 +148,7 @@ export const getProjects = asyncHandler(async (req, res, next) => {
     .populate("service", "serviceName")
     .populate({
       path: "client",
-      select: "name profilePicture",
+      select: "name companyName profilePicture",
       populate: {
         path: "profilePicture",
         select: "filePath",

@@ -38,7 +38,7 @@ const projectSchema = new mongoose.Schema(
     relatedFiles: [{ type: mongoose.Schema.Types.ObjectId, ref: "File" }],
 
     // tracker part
-
+    tracker: { type: Boolean, default: false },
     description: { type: String },
     status: {
       type: String,

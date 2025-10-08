@@ -217,7 +217,7 @@ export const deleteFreelancer = asyncHandler(async (req, res, next) => {
   if (freelancer.profilePicture) {
     const file = await File.findById(freelancer.profilePicture);
     if (file) {
-      const fullPath = path.join("public", file.path);
+      const fullPath = path.join("public", file.filePath);
       fs.unlink(file.filePath, (err) => {
         if (err) console.error("Error deleting profile picture file:", err);
       });

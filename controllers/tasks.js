@@ -246,12 +246,13 @@ export const updateTask = asyncHandler(async (req, res, next) => {
   }
 
   task.files = req.body.files;
+  console.log(task.files);
 
   if (req.files) {
     if (req.files.files) {
       // Add new files
       const newFileIds = await handleFiles(req.files.files, "file");
-      req.body.files = [...task.files, ...newFileIds];
+      req.body.files = [...(task.files || []), ...newFileIds];
     }
     if (req.files.images) {
       // Add new images
