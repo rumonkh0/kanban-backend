@@ -69,7 +69,7 @@ app.use(helmet());
 // Enable CORS
 const allowedOrigins = [
   "https://kanban-eight-sigma.vercel.app",
-  "https:/kanban-ten-ruddy.vercel.app",
+  "https://kanban-git-main-rakibos-projects.vercel.app",
   "http://localhost:5173", // local dev
   "http://192.168.1.7:5173", // local dev
 ];
