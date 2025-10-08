@@ -18,8 +18,6 @@ import { authorize, protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.use(protect, authorize("Admin"));
-
 const uploadDirectory = "public/uploads/setting/";
 
 // Ensure that the upload directory exists; if not, create it
@@ -56,6 +54,9 @@ const upload = multer({
   },
 });
 
+router.route("/theme").get(getThemeSetting);
+
+router.use(protect, authorize("Admin"));
 
 router
   .route("/admin")
@@ -66,18 +67,15 @@ router
   );
 
 // --- Theme Settings
-router
-  .route("/theme")
-  .get(getThemeSetting)
-  .put(
-    upload.fields([
-      { name: "lightModeLogo", maxCount: 1 },
-      { name: "darkModeLogo", maxCount: 1 },
-      { name: "loginBackgroundImage", maxCount: 1 },
-      { name: "faviconImage", maxCount: 1 },
-    ]),
-    editThemeSetting
-  );
+router.route("/theme").put(
+  upload.fields([
+    { name: "lightModeLogo", maxCount: 1 },
+    { name: "darkModeLogo", maxCount: 1 },
+    { name: "loginBackgroundImage", maxCount: 1 },
+    { name: "faviconImage", maxCount: 1 },
+  ]),
+  editThemeSetting
+);
 
 router
   .route("/business-address")
