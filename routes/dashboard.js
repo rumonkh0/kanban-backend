@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  getCalendarProjects,
   getClientPayment,
   getClientProject,
   getClientProjectPayment,
@@ -38,6 +39,7 @@ const router = express.Router();
 router.use(protect);
 router
   .get("/private", authorize("Admin"), getPrivateDashboard)
+  .get("/privatecalander", authorize("Admin"), getCalendarProjects)
   // Overview
   // .get("/overview", authorize("Admin"), adminOverview)
   .get("/overviewstat", authorize("Admin"), getOverviewStat)

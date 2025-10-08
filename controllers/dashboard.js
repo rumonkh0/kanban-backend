@@ -192,6 +192,42 @@ export const getPrivateDashboard = async (req, res) => {
   }
 };
 
+export const getCalendarProjects = async (req, res, next) => {
+  try {
+    const now = new Date();
+    const month = now.getMonth(); // 0-based
+    const year = now.getFullYear();
+
+    const startDate = new Date(year, month, 1);
+    const endDate = new Date(year, month + 1, 0, 23, 59, 59);
+
+    const projects = await Project.find({
+      dueDate: { $gte: startDate, $lte: endDate },
+    }).select("projectName dueDate");
+
+    // Group by day
+    const grouped = {};
+    projects.forEach((project) => {
+      const date = new Date(project.dueDate);
+      const day = date.getDate();
+
+      if (!grouped[day]) grouped[day] = [];
+      grouped[day].push({
+        id: project._id,
+        name: project.projectName,
+        // time: date.toLocaleTimeString([], {
+        //   hour: "2-digit",
+        //   minute: "2-digit",
+        // }),
+      });
+    });
+
+    res.status(200).json({ success: true, data: grouped });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Overview
 export const getOverviewStat = asyncHandler(async (req, res, next) => {
   const d = await earningsSummary();
