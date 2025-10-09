@@ -13,6 +13,7 @@ import {
   editCompanySetting,
   getSecuritySetting,
   editSecuritySetting,
+  getAllThemeSetting,
 } from "../controllers/settings.js";
 import { authorize, protect } from "../middleware/auth.js";
 
@@ -54,7 +55,7 @@ const upload = multer({
   },
 });
 
-router.route("/theme").get(getThemeSetting);
+router.route("/alltheme").get(getAllThemeSetting);
 
 router.use(protect, authorize("Admin"));
 
@@ -67,15 +68,18 @@ router
   );
 
 // --- Theme Settings
-router.route("/theme").put(
-  upload.fields([
-    { name: "lightModeLogo", maxCount: 1 },
-    { name: "darkModeLogo", maxCount: 1 },
-    { name: "loginBackgroundImage", maxCount: 1 },
-    { name: "faviconImage", maxCount: 1 },
-  ]),
-  editThemeSetting
-);
+router
+  .route("/theme")
+  .get(getThemeSetting)
+  .put(
+    upload.fields([
+      { name: "lightModeLogo", maxCount: 1 },
+      { name: "darkModeLogo", maxCount: 1 },
+      { name: "loginBackgroundImage", maxCount: 1 },
+      { name: "faviconImage", maxCount: 1 },
+    ]),
+    editThemeSetting
+  );
 
 router
   .route("/business-address")

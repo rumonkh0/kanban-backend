@@ -137,3 +137,21 @@ export const editSecuritySetting = editSetting(
   SecuritySetting,
   "SecuritySetting"
 );
+
+export const getAllThemeSetting = asyncHandler(async (req, res, next) => {
+  const theme = await ThemeSetting.findOne().populate({
+    path: [
+      "lightModeLogo",
+      "darkModeLogo",
+      "loginBackgroundImage",
+      "faviconImage",
+    ],
+    select: "filePath",
+  });
+  const company = await CompanySetting.findOne();
+
+  res.status(200).json({
+    success: true,
+    data: { company, theme },
+  });
+});

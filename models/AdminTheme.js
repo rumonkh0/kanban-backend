@@ -9,10 +9,10 @@ const themeSettingSchema = new mongoose.Schema(
       default: "style1",
     },
 
-    lightModeLogo: { type: String, default: null },
-    darkModeLogo: { type: String, default: null },
-    loginBackgroundImage: { type: String, default: null },
-    faviconImage: { type: String, default: null },
+    lightModeLogo: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
+    darkModeLogo: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
+    loginBackgroundImage: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
+    faviconImage: { type: mongoose.Schema.Types.ObjectId, ref: "File" },
     loginLogoTxtColor: {
       type: String,
       enum: ["Light", "Dark"],
