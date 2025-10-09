@@ -8,6 +8,7 @@ import {
   getFreelancer,
   updateFreelancer,
   deleteFreelancer,
+  getMemberStats,
 } from "../controllers/freelancers.js";
 import teamPayments from "./teamPayments.js";
 import { authorize, protect } from "../middleware/auth.js";
@@ -60,9 +61,11 @@ router
   .get(getFreelancers)
   .post(uploadFields, authorize("Admin"), createFreelancer);
 
+router.get("/:freelancerId/stat", getMemberStats);
+
 router
   .route("/:id")
   .get(getFreelancer)
-  .put(uploadFields, authorize("Admin","Freelancer"), updateFreelancer)
+  .put(uploadFields, authorize("Admin", "Freelancer"), updateFreelancer)
   .delete(authorize("Admin"), deleteFreelancer);
 export default router;

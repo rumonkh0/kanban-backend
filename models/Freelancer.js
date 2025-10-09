@@ -52,7 +52,7 @@ const freelancerSchema = new mongoose.Schema(
     averageRate: { type: Number, default: 0 },
     slackId: { type: String, trim: true },
 
-    skills: [{ type: String, trim: true }], // array of skills
+    skills: { type: String, trim: true }, // array of skills
 
     probationEndDate: { type: Date },
     noticePeriodStartDate: { type: Date },

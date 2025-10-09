@@ -88,20 +88,21 @@ projectSchema.pre("save", function (next) {
     this.isModified("customPrice") ||
     this.isModified("discount")
   ) {
-    let basePrice = 0;
+    // let basePrice = 0;
 
     if (this.customPrice > 0) {
-      basePrice = this.customPrice;
-    } else {
-      basePrice = this.projectPrice;
+      this.finalAmountForClient = this.customPrice;
+    } else if (this.discount > 0 && projectPrice > 0) {
+      const discountAmount = projectPrice * (this.discount / 100);
+      this.finalAmountForClient = projectPrice - discountAmount;
     }
 
-    if (this.discount > 0 && basePrice > 0) {
-      const discountAmount = basePrice * (this.discount / 100);
-      this.finalAmountForClient = basePrice - discountAmount;
-    } else {
-      this.finalAmountForClient = basePrice;
-    }
+    // if (this.discount > 0 && basePrice > 0) {
+    //   const discountAmount = basePrice * (this.discount / 100);
+    //   this.finalAmountForClient = basePrice - discountAmount;
+    // } else {
+    //   this.finalAmountForClient = basePrice;
+    // }
     recalculateFinalAmountEarned = true;
   }
 
@@ -112,11 +113,11 @@ projectSchema.pre("save", function (next) {
     this.isNew
   ) {
     this.amountOwedToMembers =
-      this.amountPayableToMembers - this.amountPaidToMembers;
+      (this.amountPayableToMembers ?? 0) - (this.amountPaidToMembers ?? 0);
 
-    if (this.amountOwedToMembers < 0) {
-      this.amountOwedToMembers = 0;
-    }
+    // if (this.amountOwedToMembers < 0) {
+    //   this.amountOwedToMembers = 0;
+    // }
     recalculateFinalAmountEarned = true;
   }
 

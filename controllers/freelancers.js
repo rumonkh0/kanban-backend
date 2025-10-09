@@ -9,6 +9,8 @@ import File from "../models/File.js";
 import fs from "fs";
 import path from "path";
 import Task from "../models/Task.js";
+import mongoose from "mongoose";
+import ProjectMember from "../models/ProjectMember.js";
 
 // @desc      Create a freelancer
 // @route     POST /api/v1/freelancers
@@ -103,6 +105,108 @@ export const getFreelancers = asyncHandler(async (req, res, next) => {
     count: freelancers.length,
     data: freelancersWithCount,
   });
+});
+
+// @desc      Get freelancer stat
+// @route     GET /api/v1/freelancers/:id/stat
+// @access    Private/Admin
+export const getMemberStats = asyncHandler(async (req, res) => {
+  try {
+    const { freelancerId } = req.params;
+    const memberObjectId = new mongoose.Types.ObjectId(freelancerId);
+
+    // 🕒 Normalize today's date to midnight
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 📊 Task Stats
+    const taskStats = await Task.aggregate([
+      { $match: { members: memberObjectId } },
+      {
+        $group: {
+          _id: null,
+          totalTasks: { $sum: 1 },
+          activeTasks: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "Active"] }, 1, 0],
+            },
+          },
+          completedTasks: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "Completed"] }, 1, 0],
+            },
+          },
+          dueTasks: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$status", "Active"] },
+                    { $gte: ["$dueDate", today] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          overdueTasks: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ["$status", "Completed"] },
+                    { $lt: ["$dueDate", today] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    const {
+      totalTasks = 0,
+      activeTasks = 0,
+      dueTasks = 0,
+      overdueTasks = 0,
+      completedTasks = 0,
+    } = taskStats[0] || {};
+
+    // 💰 Payment Stats from ProjectMember
+    const paymentStats = await ProjectMember.aggregate([
+      { $match: { freelancer: memberObjectId } },
+      {
+        $group: {
+          _id: null,
+          amountPaid: { $sum: "$amountPaid" },
+          amountOwed: { $sum: "$amountOwed" },
+        },
+      },
+    ]);
+
+    const { amountPaid = 0, amountOwed = 0 } = paymentStats[0] || {};
+
+    res.json({
+      success: true,
+      data: {
+        freelancerId,
+        totalTasks,
+        activeTasks,
+        dueTasks,
+        overdueTasks,
+        completedTasks,
+        amountPaid,
+        amountOwed,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to get member stats" });
+  }
 });
 
 // @desc      Get a single freelancer
