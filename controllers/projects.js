@@ -439,9 +439,58 @@ export const updateProject = asyncHandler(async (req, res, next) => {
     updateData.service = service;
   }
 
-  if (status && status === "Complete" && project.status !== "Complete")
+  console.log(project);
+
+  if (status && status === "Complete" && project.status !== "Complete") {
     req.body.completionDate = Date.now();
-  else req.body.completionDate = null;
+    const notificationMessage = `${project.projectName} has been marked complete.`;
+    const activityMessage = `project completed`;
+    try {
+      await addProjectActivity(activityMessage, project._id);
+    } catch (error) {
+      console.log(error);
+    }
+    const clientId = project.client;
+    if (clientId)
+      await createNotification({
+        recipient: clientId,
+        message: notificationMessage,
+      });
+
+    // Notify all members
+    const notificationPromises = project.members.map((freelancerId) => {
+      return createNotification({
+        recipient: freelancerId,
+        message: notificationMessage,
+      });
+    });
+    try {
+      await Promise.all(notificationPromises);
+    } catch (error) {
+      console.log(error);
+    }
+    // Send email to client
+    try {
+      const client = await Client.findById(clientId).populate("user", "email");
+      if (client && client.user && client.user.email) {
+        await sendEmail({
+          to: client.user.email,
+          subject: "Project Completed",
+          message: `Hi ${client.name},
+
+ "${project.projectName} Has been completed".
+
+
+
+Best regards,
+The Team
+`,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  } else req.body.completionDate = null;
 
   // --- 4. Apply Updates and Trigger Hook ---
 

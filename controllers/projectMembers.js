@@ -221,7 +221,7 @@ export const addProjectMember = async (
   await addProjectActivity(activityMessage, projectId);
 
   // Send Email (Wrapped in try/catch to ensure database operation completes)
-  console.log(existingFreelancer.user.email);
+  // console.log(existingFreelancer.user.email);
   if (existingFreelancer.user.email) {
     try {
       await sendEmail({

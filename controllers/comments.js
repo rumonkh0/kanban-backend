@@ -5,6 +5,9 @@ import Task from "../models/Task.js";
 import { populate } from "dotenv";
 import User from "../models/User.js";
 import Admin from "../models/Admin.js";
+import { bulkCreateNotifications } from "./notifications.js";
+import sendEmail, { bulkSendEmails } from "../utils/sendEmail.js";
+import Freelancer from "../models/Freelancer.js";
 
 // @desc      Create a new comment
 // @route     POST /api/v1/tasks/:taskId/comments
@@ -14,16 +17,62 @@ export const createComment = asyncHandler(async (req, res, next) => {
   const { content } = req.body;
 
   // Validate that the task exists
-  const existingTask = await Task.findById(taskId);
+  const existingTask = await Task.findById(taskId).populate(
+    "project",
+    "projectName"
+  );
   if (!existingTask) {
     return next(new ErrorResponse("Task not found.", 404));
   }
 
+  // console.log(existingTask);
+
   const comment = await Comment.create({
     content,
-    author: req.user._id, // Assuming a logged-in user ID from middleware
+    author: req.user._id,
     task: taskId,
   });
+
+  const exceptAuthor = existingTask.members.filter(
+    (memberId) => memberId.toString() !== req.user.profile?._id.toString()
+  );
+
+  const admin = await Admin.findOne().populate("user", "email");
+
+  const notificationRecipients = [...exceptAuthor, admin._id];
+
+  // console.log(req.user);
+
+  const notificationMessage = `New comment in task "${existingTask.title}"`;
+  try {
+    await bulkCreateNotifications({
+      recipients:
+        req.user.role !== "admin" ? notificationRecipients : exceptAuthor,
+      message: notificationMessage,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+
+  const emailMessage = `A new comment has been added to the task "${existingTask.title}" of project "${existingTask.project?.projectName}".. Check it out!`;
+  const emailSubject = `New Comment on Task "${existingTask.title}" of project "${existingTask.project?.projectName}"`;
+  try {
+    await bulkSendEmails({
+      Model: Freelancer,
+      recipientIds: exceptAuthor,
+      subject: emailSubject,
+      message: emailMessage,
+    });
+    if (req.user.role !== "admin") {
+      await sendEmail({
+        email: admin?.user?.email,
+        subject: `New Comment on Task "${existingTask.title}" of project "${existingTask.project?.projectName}"`,
+        message: `A new comment has been added to the task "${existingTask.title}" of project "${existingTask.project?.projectName}".. Check it out!`,
+      });
+    }
+  } catch (error) {
+    console.log(error);
+  }
 
   res.status(201).json({
     success: true,
@@ -113,9 +162,9 @@ export const deleteComment = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`Comment not found with id of ${id}`, 404));
   }
 
-  if (comment.author.toString() !== req.user.id && req.user.role !== "admin") {
+  if (comment.author.toString() !== req.user.id && req.user.role !== "Admin") {
     return next(
-      new ErrorResponse(`Not authorized to delete this comment`, 401)
+      new ErrorResponse(`Not authorized to delete this comment`, 400)
     );
   }
 

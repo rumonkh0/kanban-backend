@@ -9,7 +9,9 @@ import { generateKeyBetween } from "fractional-indexing";
 import fs from "fs";
 import path from "path";
 import { addProjectActivity } from "./projectActivity.js";
-import sendEmail from "../utils/sendEmail.js";
+import sendEmail, { bulkSendEmails } from "../utils/sendEmail.js";
+import Admin from "../models/Admin.js";
+import { bulkCreateNotifications } from "./notifications.js";
 
 // @desc      Create a task
 // @route     POST /api/v1/projects/:projectId/stages/:stageId/tasks
@@ -40,10 +42,10 @@ export const createTask = asyncHandler(async (req, res, next) => {
           new ErrorResponse(`Freelancer not found with ID ${memberId}`, 404)
         );
       }
-      await addProjectActivity(
-        `${existingMember.name} added to task ${req.body.title}`,
-        memberId
-      );
+      // await addProjectActivity(
+      //   `${existingMember.name} added to task ${req.body.title}`,
+      //   memberId
+      // );
 
       try {
         await sendEmail({
@@ -60,6 +62,15 @@ The Team
 `,
         });
       } catch {}
+    }
+    const notificationMessage = `You are assigned to task "${req.body.title}"`;
+    try {
+      await bulkCreateNotifications({
+        recipients: members,
+        message: notificationMessage,
+      });
+    } catch (error) {
+      console.log(error);
     }
   }
 
@@ -201,7 +212,10 @@ export const getTask = asyncHandler(async (req, res, next) => {
 // @route     PUT /api/v1/tasks/:id
 // @access    Private/Admin
 export const updateTask = asyncHandler(async (req, res, next) => {
-  let task = await Task.findById(req.params.id);
+  let task = await Task.findById(req.params.id).populate(
+    "project",
+    "projectName"
+  );
 
   if (!task) {
     return next(
@@ -221,10 +235,29 @@ export const updateTask = asyncHandler(async (req, res, next) => {
     );
 
     if (membersToAdd.length > 0) {
-      const memberCreationPromises = membersToAdd.map((freelancerId) =>
-        addProjectMember(project._id, freelancerId, project)
-      );
-      await Promise.all(memberCreationPromises);
+      //send notification and emial to new members
+      const notificationMessage = `You are assigned to task "${task.title}"`;
+      try {
+        await bulkCreateNotifications({
+          recipients: membersToAdd,
+          message: notificationMessage,
+        });
+      } catch (error) {
+        console.log(error);
+      }
+
+      const emailMessage = `You are added to task "${task.title}" of project "${task.project?.projectName}".. Check it out!`;
+      const emailSubject = `Assigned to new task "${task.title}" of project "${task.project?.projectName}"`;
+      try {
+        await bulkSendEmails({
+          Model: Freelancer,
+          recipientIds: membersToAdd,
+          subject: emailSubject,
+          message: emailMessage,
+        });
+      } catch (error) {
+        console.log(error);
+      }
     }
   }
 
@@ -253,6 +286,47 @@ export const updateTask = asyncHandler(async (req, res, next) => {
       // Add new files
       const newFileIds = await handleFiles(req.files.files, "file");
       req.body.files = [...(task.files || []), ...newFileIds];
+      //activity
+      const activityMsg = `${newFileIds.length} new file(s) added to task ${task.title}`;
+      await addProjectActivity(activityMsg, task.project);
+
+      //notification
+      const notificationMessage = `New file(s) added to task "${task.title}"`;
+      const exceptAuthor = task.members.filter(
+        (memberId) => memberId.toString() !== req.user.profile?._id.toString()
+      );
+      const admin = await Admin.findOne().populate("user", "email");
+      const notificationRecipients = [...exceptAuthor, admin._id];
+      try {
+        await bulkCreateNotifications({
+          recipients:
+            req.user.role !== "admin" ? notificationRecipients : exceptAuthor,
+          message: notificationMessage,
+        });
+      } catch (error) {
+        console.log(error);
+      }
+
+      //email
+      const emailMessage = `New file(s) have been added to the task "${task.title}" of project "${task.project?.projectName}".. Check it out!`;
+      const emailSubject = `New File(s) Added to Task "${task.title}" of project "${task.project?.projectName}"`;
+      try {
+        await bulkSendEmails({
+          Model: Freelancer,
+          recipientIds: exceptAuthor,
+          subject: emailSubject,
+          message: emailMessage,
+        });
+        if (req.user.role !== "admin") {
+          await sendEmail({
+            email: admin?.user?.email,
+            subject: `New Comment on Task "${existingTask.title}" of project "${existingTask.project?.projectName}"`,
+            message: `A new comment has been added to the task "${existingTask.title}" of project "${existingTask.project?.projectName}".. Check it out!`,
+          });
+        }
+      } catch (error) {
+        console.log(error);
+      }
     }
     if (req.files.images) {
       // Add new images
@@ -285,9 +359,35 @@ export const updateTask = asyncHandler(async (req, res, next) => {
 export const updateTaskOrder = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
-  let task = await Task.findById(id);
+  let task = await Task.findById(id).populate("project", "projectName");
   if (!task) {
     return next(new ErrorResponse(`Task not found with id of ${id}`, 404));
+  }
+  if (req.body.newStage && task.stage.toString() !== req.body.newStage) {
+    console.log(req.body.newStage, task.stage);
+    //send notification to members about stage change
+    const notificationMessage = `Task "${task.title}" moved to another stage`;
+    try {
+      await bulkCreateNotifications({
+        recipients: task.members,
+        message: notificationMessage,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+
+    const emailMessage = `Task "${task.title}" of project "${task.project?.projectName}" has been moved to another stage. Check it out!`;
+    const emailSubject = `Task "${task.title}" Moved to Another Stage in project "${task.project?.projectName}"`;
+    try {
+      await bulkSendEmails({
+        Model: Freelancer,
+        recipientIds: task.members,
+        subject: emailSubject,
+        message: emailMessage,
+      });
+    } catch (error) {
+      console.log(error);
+    }
   }
   if (req.body.newStage) task.stage = req.body.newStage;
 

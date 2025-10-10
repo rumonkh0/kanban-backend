@@ -24,7 +24,6 @@ export const login = asyncHandler(async (req, res, next) => {
         select: "filePath",
       },
     });
-
   if (!user) {
     return next(new ErrorResponse("Invalid credentials", 401));
   }

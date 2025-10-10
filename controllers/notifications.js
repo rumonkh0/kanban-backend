@@ -97,3 +97,15 @@ export const createNotification = async ({ recipient, message }) => {
     console.error(`Error creating notification: ${err.message}`);
   }
 };
+
+export const bulkCreateNotifications = async ({ recipients, message }) => {
+  try {
+    const notifications = recipients.map((recipient) => ({
+      recipient,
+      message,
+    }));
+    await Notification.insertMany(notifications, { ordered: false });
+  } catch (err) {
+    console.error(`Error creating notifications: ${err.message}`);
+  }
+};
