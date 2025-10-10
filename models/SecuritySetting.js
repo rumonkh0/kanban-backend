@@ -6,7 +6,11 @@ const securitySettingSchema = new mongoose.Schema(
     smsAuthEnabled: { type: Boolean, default: false },
     googleRecaptchaEnabled: { type: Boolean, default: false },
 
-    recaptchaVersion: { type: String, enum: ["V2", "V3"], default: "V2" },
+    recaptchaVersion: {
+      type: String,
+      enum: ["v2", "v3", "none"],
+      default: "none",
+    },
     recaptchaV2Key: { type: String, default: "" },
     recaptchaV2Secret: { type: String, default: "" },
   },

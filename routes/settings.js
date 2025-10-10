@@ -56,6 +56,7 @@ const upload = multer({
 });
 
 router.route("/alltheme").get(getAllThemeSetting);
+router.get("/security", getSecuritySetting);
 
 router.use(protect, authorize("Admin"));
 
@@ -90,6 +91,6 @@ router
 router.route("/company").get(getCompanySetting).put(editCompanySetting);
 
 // --- Security Settings
-router.route("/security").get(getSecuritySetting).put(editSecuritySetting);
+router.route("/security").put(editSecuritySetting);
 
 export default router;

@@ -2,19 +2,89 @@ import ErrorResponse from "../utils/errorResponse.js";
 import asyncHandler from "../middleware/async.js";
 import sendEmail from "../utils/sendEmail.js";
 import User from "../models/User.js";
+import SecuritySetting from "../models/SecuritySetting.js";
 
 // @desc      Login user
 // @route     POST /api/v1/auth/login
 // @access    Public
-export const login = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body;
+// export const login = asyncHandler(async (req, res, next) => {
+//   const { email, password } = req.body;
 
-  // Validate emil & password
+//   // Validate emil & password
+//   if (!email || !password) {
+//     return next(new ErrorResponse("Please provide an email and password", 400));
+//   }
+
+//   // Check for user
+//   const user = await User.findOne({ email })
+//     .select("+password")
+//     .populate({
+//       path: "profile",
+//       populate: {
+//         path: "profilePicture",
+//         select: "filePath",
+//       },
+//     });
+//   if (!user) {
+//     return next(new ErrorResponse("Invalid credentials", 401));
+//   }
+
+//   // Check if password matches
+//   const isMatch = await user.matchPassword(password);
+
+//   if (!isMatch) {
+//     return next(new ErrorResponse("Invalid credentials", 401));
+//   }
+
+//   user.lastLogin = Date.now();
+//   await user.save();
+
+//   sendTokenResponse(user, 200, res);
+// });
+
+export const login = asyncHandler(async (req, res, next) => {
+  const { email, password, recaptchaToken } = req.body;
+
+  // Validate email & password
   if (!email || !password) {
     return next(new ErrorResponse("Please provide an email and password", 400));
   }
 
-  // Check for user
+  // 1. Check reCAPTCHA settings and verify token
+  const settings = await SecuritySetting.findOne({}); // Fetch active settings
+  const activeVersion = settings?.recaptchaVersion || "none"; // Default to 'none' or 'v2'
+
+  if (activeVersion !== "none") {
+    if (!recaptchaToken) {
+      return next(new ErrorResponse("reCAPTCHA token is missing.", 403));
+    }
+
+    const verificationResult = await verifyRecaptcha(
+      recaptchaToken,
+      activeVersion
+    );
+
+    if (!verificationResult.success) {
+      console.error(
+        "reCAPTCHA verification failed:",
+        verificationResult["error-codes"]
+      );
+      return next(
+        new ErrorResponse("Failed security check. Please try again.", 403)
+      );
+    }
+
+    // V3 Specific Check (Check score threshold)
+    if (activeVersion === "v3" && verificationResult.score < 0.5) {
+      console.warn(`reCAPTCHA V3 score too low: ${verificationResult.score}`);
+      return next(
+        new ErrorResponse("Failed security check. Access denied.", 403)
+      );
+    }
+    // Note: You might want to also check verificationResult.action === 'login' for V3
+  }
+
+  // 2. Check for user
   const user = await User.findOne({ email })
     .select("+password")
     .populate({
@@ -24,17 +94,19 @@ export const login = asyncHandler(async (req, res, next) => {
         select: "filePath",
       },
     });
+
   if (!user) {
     return next(new ErrorResponse("Invalid credentials", 401));
   }
 
-  // Check if password matches
+  // 3. Check if password matches
   const isMatch = await user.matchPassword(password);
 
   if (!isMatch) {
     return next(new ErrorResponse("Invalid credentials", 401));
   }
 
+  // 4. Update last login and send token
   user.lastLogin = Date.now();
   await user.save();
 
@@ -229,4 +301,46 @@ const sendTokenResponse = (user, statusCode, res) => {
     token,
     data: user,
   });
+};
+
+const getSecretKey = (version) => {
+  // Replace with your actual ENV variables
+  if (version === "v3") return process.env.RECAPTCHA_V3_SECRET_KEY;
+  if (version === "v2") return process.env.RECAPTCHA_V2_SECRET_KEY;
+  return null;
+};
+
+export const verifyRecaptcha = async (token, version) => {
+  const secret = getSecretKey(version);
+
+  if (!secret) {
+    return {
+      success: false,
+      "error-codes": ["invalid-security-configuration"],
+    };
+  }
+
+  try {
+    const response = await fetch(
+      "https://www.google.com/recaptcha/api/siteverify",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          secret: secret,
+          response: token,
+        }),
+      }
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(
+      "Error communicating with Google reCAPTCHA API:",
+      error.message
+    );
+    return { success: false, "error-codes": ["api-communication-failure"] };
+  }
 };
